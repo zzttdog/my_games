@@ -154,7 +154,14 @@ python net/tools/read-online-save.py --game harmonies --room 9999 --history
   再映射回本地；回合清理、`round` 递增、`aiTurn()` 调用仍走原逻辑。
 - **供应区 / 手牌标记没有官方图案**：`.tok` 的 CSS 相对路径原来解析到 `Harmonies/css/Images/res/...`，
   已改为 `../Images/res/...`（六种地形：water / mountain / trunk / tree / field / building）。
-- 联机页 iframe 增加 `_v=20261116b` 版本参数，避免浏览器继续用旧 `save.js`；改前端脚本后记得同步 bump。
+- 联机页 iframe 增加 `_v=20261116c` 版本参数，避免浏览器继续用旧 `save.js`；改前端脚本后记得同步 bump。
+
+## 静态资源缓存（2026-11-16）
+
+- 图片是 `public, max-age=86400`；游戏脚本 / 样式 / 联机桥 / PeerJS 使用 `?v=20261116c` 版本地址，服务端对“带版本参数的 JS/CSS”返回 `public, max-age=31536000, immutable`。
+- 联机页不再用 `fetch(..., { cache: 'no-store' })` 拉 `bridge.js` 和 `peerjs.min.js`，改为版本地址 + `force-cache`；刷新大厅和进入房间都不会重新下载这两个脚本。
+- 游戏页首屏预热过一次并完整完成后，会在 `localStorage` 记一个 `mygames.preload.warm.<game>`，之后不再弹全屏“正在载入游戏资源”遮罩；图片仍由游戏自身的 `<img>` 从浏览器缓存读取。
+- **改前端文件时统一 bump 版本号**：`net/client/play.html` 的 `CACHE_V`、两个游戏 `index.html` 里的 `?v=`、以及 `save.js?v=` 必须一起改，否则浏览器会继续用旧缓存。
 
 
 

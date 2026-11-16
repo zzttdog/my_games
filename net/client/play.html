@@ -374,9 +374,9 @@
   </div>
 </div>
 
-<script src="vendor/peerjs.min.js"></script>
-<script src="mobile-shell.js"></script>
-<script src="games.js"></script>
+<script src="vendor/peerjs.min.js?v=1.5.4"></script>
+<script src="mobile-shell.js?v=20261116c"></script>
+<script src="games.js?v=20261116c"></script>
 <script>
 (function () {
   'use strict';
@@ -389,6 +389,9 @@
     return url + (url.indexOf('?') >= 0 ? '&' : '?') + 'sharecode=' + encodeURIComponent(SHARE);
   }
   var PEER = 'p' + Math.random().toString(36).slice(2, 10);
+  /* 前端脚本缓存版本：改动 bridge.js / save.js / 游戏脚本后统一 bump。
+     bridge.js、PeerJS 用版本化 URL + force-cache，避免每次进房间都重新下载。 */
+  var CACHE_V = '20261116c';
   var MG = (window.MG_GAMES && window.MG_GAMES.games) || {};
   var GKEYS = Object.keys(MG).sort(function (a, b) { return (MG[a].order || 0) - (MG[b].order || 0); });
   if (!GKEYS.length) GKEYS = ['harmonies', 'castle'];
@@ -482,7 +485,7 @@
        表现为「正在载入棋盘」卡死；内联执行完全没有这个依赖。 */
     var bridgeCode = null, bridgeErr = '';
     function loadBridge() {
-      return fetch(withShare('bridge.js'), { cache: 'no-store' })
+      return fetch(withShare('bridge.js?v=' + CACHE_V), { cache: 'force-cache' })
         .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
         .then(function (t) {
           if (!t || t.length < 500) throw new Error('响应内容为空');
@@ -494,7 +497,7 @@
     /* PeerJS 库也要注入到游戏 iframe 里；父页先取一份文本，开局时和 bridge.js 一起内联执行。 */
     var peerCode = null, peerErr = '';
     function loadPeer() {
-      return fetch(withShare('vendor/peerjs.min.js'), { cache: 'no-store' })
+      return fetch(withShare('vendor/peerjs.min.js?v=1.5.4'), { cache: 'force-cache' })
         .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
         .then(function (t) {
           if (!t || t.length < 2000) throw new Error('响应内容为空');
@@ -829,7 +832,7 @@
         '&net_match=' + encodeURIComponent(match) +
         '&net_transport=' + encodeURIComponent(transport) +
         '&net_cfg=' + encodeURIComponent(JSON.stringify(full)) +
-        '&_v=20261116b');
+        '&_v=' + CACHE_V);
       var frame = $('frame');
       frame.style.opacity = '0';
       var injected = false, bridgeReady = false;

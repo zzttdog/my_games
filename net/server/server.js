@@ -224,10 +224,18 @@ async function serveStatic(req, res, u) {
     if (wst && wst.isFile()) { target = full + '.webp'; usedSt = wst; ct = 'image/webp'; }
   }
 
+  /* HTML 必须每次回源校验；带 v/_v 的脚本和样式可以长缓存。
+     版本号在 index.html / play.html 里显式控制，更新代码时一起 bump。 */
+  const versioned = u.searchParams.has('v') || u.searchParams.has('_v');
+  const isHtml = ext === '.html' || ext === '.htm';
+  const cacheControl = IMAGE_EXT.has(ext)
+    ? 'public, max-age=86400'
+    : (isHtml ? 'no-cache'
+      : (versioned ? 'public, max-age=31536000, immutable' : 'no-cache'));
   const etag = '"' + Math.floor(usedSt.mtimeMs).toString(36) + '-' + usedSt.size.toString(36) + '"';
   const headers = {
     'Content-Type': ct,
-    'Cache-Control': IMAGE_EXT.has(ext) ? 'public, max-age=86400' : 'no-cache',
+    'Cache-Control': cacheControl,
     'ETag': etag,
     'Vary': 'Accept, Accept-Encoding'
   };

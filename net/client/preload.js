@@ -38,12 +38,28 @@
   var rest = (list && list.rest) || [];
   var total = essential.length;
 
+  /* 已经完整预热过一次的浏览器，不再弹全屏遮罩。图片仍由游戏自己的 <img> 按需加载，
+     缓存命中时是本地读取；这样“第二次进游戏”不会又看到一次“正在载入游戏资源”。 */
+  var warm = false;
+  try { warm = localStorage.getItem('mygames.preload.warm.' + GAME) === '1'; } catch (e) {}
+
   /* 暴露给 bridge.js：自然之灵二选一的 30 秒兜底要等玩家真能看到弹窗才开始计时 */
   var api = { done: false, game: GAME, total: total, loaded: 0, peak: 0, reason: '' };
   window.MGPreload = api;
 
   /* 清单没取到（旧缓存 / 单独打开）时绝不能把游戏挡住 */
   if (!total) { api.done = true; return; }
+  if (warm) {
+    api.done = true;
+    api.reason = 'warm';
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ __mg_preload: true, status: 'done', game: GAME,
+          total: total, loaded: total, reason: 'warm' }, '*');
+      }
+    } catch (e) {}
+    return;
+  }
 
   var inFrame = false;
   try { inFrame = !!(window.parent && window.parent !== window); } catch (e) {}
@@ -162,6 +178,9 @@
     clearTimeout(hardTimer);
     api.done = true;
     api.reason = reason;
+    if (reason === 'complete') {
+      try { localStorage.setItem('mygames.preload.warm.' + GAME, '1'); } catch (e) {}
+    }
     post('done', reason);
     try { window.dispatchEvent(new CustomEvent('mgpreload:done', { detail: { reason: reason } })); } catch (e) {}
     mask.style.opacity = '0';
