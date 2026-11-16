@@ -16,6 +16,7 @@ GitHub Pages 是纯静态托管：
   - 依赖 PeerJS Cloud 信令与 STUN；当前没有 TURN，双方处于对称 NAT / 移动网络时可能连不上。
   - 正式长期使用建议自建 PeerServer + coturn，并把客户端信令/ICE 配置指向自己的服务。
 - **线上对局存档 `/net/save`**：只有 Node 服务提供；GitHub Pages 上该接口为 404。
+- **AI 复盘**：Pages 上由房主点“导出复盘”生成 `mygames-replay-*.json`，再交给 `net/tools/replay-ai.py` 或 AI；不需要 `/net/save`。
 - PeerJS 模式不会上传 `/net/save`；房主只写浏览器本地存档。要让 AI 自动读线上对局，需要另接 Cloudflare Worker/Supabase 等中心端点。
 - 所有对局存档都在本地 `net/server/saves/`，已加入 `.gitignore`，不会提交到仓库。
 
