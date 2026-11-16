@@ -2,6 +2,8 @@
 
 《自然和弦》（Harmonies）与《姬路城》（The White Castle）的网页版 + 联机大厅。
 
+在线站点：<https://zzttdog.github.io/my_games/>
+
 ## 快速开始
 
 ```powershell
