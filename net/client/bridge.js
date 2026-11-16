@@ -266,7 +266,7 @@
       l.cur = wireToLocal[wire.cur];
       l.first = wireToLocal[wire.first];
       l.players.forEach(function (p, idx) {
-        p.isAI = idx !== 0;                 // 只有本地 0 是人类
+        p.isAI = isAI(localToWire[idx]);
         p.name = idx === 0 ? '你' : label(localToWire[idx]);
       });
       l.undoStack = []; l.roundStart = null; l.n = TOTAL;
