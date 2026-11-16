@@ -130,6 +130,15 @@ python net/tools/read-online-save.py --game harmonies --room 9999 --history
 - 进入对局后停止大厅的在线心跳和名单重绘（原先 1s / 700ms 常驻）。
 - `bridge.js` 暴露 `window.MGNetStat`：`tx/rx`、字节数、`lastLatency`、`lastApplyMs`，可在控制台查看。
 
+## PeerJS 跨设备联机（2026-11-16，可选）
+
+- 入口仍是 `net/client/play.html`。静态部署检测不到 Node `/ping` 时默认勾选 **PeerJS 测试**；也可以在生产服务器上手动勾选。
+- 勾选后房间 URL 带 `peer=1`；房主/客机用同一 4 位房间号建立 WebRTC DataChannel，不再请求 `/net/room`。
+- 大厅和 `bridge.js` 都保留 `net` / `local` 分支：Node SSE 与同浏览器 BroadcastChannel 仍可用。
+- PeerJS 库已内置在 `net/client/vendor/peerjs.min.js`（1.5.4，MIT），不依赖 CDN。
+- 默认使用 PeerJS Cloud 信令。当前只加 STUN，没有 TURN；双方处于对称 NAT / 移动网络时可能连不上。正式长期用建议自建 PeerServer + coturn，并在 `play.html` / `bridge.js` 替换信令和 ICE 配置。
+- PeerJS 只解决联机，不解决线上存档：静态站没有 `/net/save`；房主仍写本地 `localStorage`，AI 自动读取需要另接 Cloudflare Worker/Supabase 等中心存档端点。
+
 ## 瘦身归档（2026-11-16）
 
 项目从 **514.3 MB** 降到 **319.4 MB**，移出的约 195 MB 非运行时素材在：

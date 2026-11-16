@@ -254,6 +254,12 @@
   </div>
 
   <div class="warnbox" id="envWarn">正在检测联机环境…</div>
+  <div id="peerOptBox" style="display:none;margin:12px 0;padding:10px 14px;border:1px solid #2a3543;border-radius:8px;background:#121a24;font-size:12px;color:#9fb0c4">
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:#e8edf4">
+      <input type="checkbox" id="peerOpt"> 跨设备联机（PeerJS 测试）
+    </label>
+    <span style="display:block;margin-top:5px">勾选后房主和客机走 WebRTC 直连，不再经过 Node 的 <code>/room</code>；使用 PeerJS Cloud 信令，首次连接可能需要几秒。</span>
+  </div>
 
   <div class="hint">
     <b>联机测试步骤</b><br>
@@ -368,6 +374,7 @@
   </div>
 </div>
 
+<script src="vendor/peerjs.min.js"></script>
 <script src="mobile-shell.js"></script>
 <script src="games.js"></script>
 <script>
@@ -444,8 +451,10 @@
     });
 
     function goRoom(room, role) {
+      var usePeer = $('peerOpt') && $('peerOpt').checked;
       location.href = withShare('play.html?game=' + game + '&room=' + room + '&role=' + role +
-                      '&name=' + encodeURIComponent(nameOf('nameInput')));
+                      '&name=' + encodeURIComponent(nameOf('nameInput')) +
+                      (usePeer ? '&peer=1' : ''));
     }
     fetch(withShare('../ping'), { cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
@@ -454,9 +463,12 @@
         $('envWarn').className = 'warnbox ok';
         $('envWarn').innerHTML = '<b>✓ 服务端房间已启用</b>：' + '<code>node net/server/server.js</code> 正在运行。' +
           '两台设备 / 不同浏览器打开同一站点、输入同一个 4 位房间号即可联机；同一浏览器的多个窗口也可以。';
+        $('peerOptBox').style.display = 'block';
       })
       .catch(function () {
-        $('envWarn').innerHTML = '<b>⚠ 当前是纯静态部署</b>：没有服务端房间，只能用<b>同一浏览器的多个窗口</b>联机（BroadcastChannel 不跨浏览器 / 设备）。跨设备请运行 <code>node net/server/server.js</code> 后用它提供的地址打开。';
+        $('peerOptBox').style.display = 'block';
+        if ($('peerOpt')) $('peerOpt').checked = true;
+        $('envWarn').innerHTML = '<b>⚠ 当前是纯静态部署</b>：已默认启用 <b>PeerJS 跨设备联机</b>（房主和客机走 WebRTC 直连）；如果只想在同一浏览器多开，请取消下方勾选。';
       });
   }
 
@@ -479,11 +491,27 @@
         .catch(function (e) { bridgeErr = (e && e.message) || '网络错误'; });
     }
     loadBridge();
+    /* PeerJS 库也要注入到游戏 iframe 里；父页先取一份文本，开局时和 bridge.js 一起内联执行。 */
+    var peerCode = null, peerErr = '';
+    function loadPeer() {
+      return fetch(withShare('vendor/peerjs.min.js'), { cache: 'no-store' })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+        .then(function (t) {
+          if (!t || t.length < 2000) throw new Error('响应内容为空');
+          peerCode = t; peerErr = '';
+        })
+        .catch(function (e) { peerErr = (e && e.message) || '网络错误'; });
+    }
+    loadPeer();
     /* 预取失败要持续重试：绝不在 iframe 内再发一次 bridge.js 子请求，
        否则图片占满连接时那个请求会排队，客机就会报「棋盘加载超时」。 */
     var bridgeRetry = setInterval(function () {
       if (bridgeCode) { clearInterval(bridgeRetry); return; }
       loadBridge();
+    }, 2000);
+    var peerRetry = setInterval(function () {
+      if (peerCode) { clearInterval(peerRetry); return; }
+      loadPeer();
     }, 2000);
 
     var cfgRoom = (Q.get('room') || '0000').replace(/\D/g, '').slice(0, 4);
@@ -491,7 +519,8 @@
     var game = gameFromQ(Q.get('game'));
     var isHost = Q.get('role') === 'host';
     var MYNAME = (Q.get('name') || getNick()).slice(0, 12);
-    var transport = 'local';
+    var usePeer = Q.get('peer') === '1' || Q.get('net_transport') === 'peer';
+    var transport = usePeer ? 'peer' : 'local';
 
     /* 窄屏按钮文案压缩，避免顶栏折成三行把棋盘挤下去 */
     try {
@@ -518,6 +547,7 @@
     inv.searchParams.set('game', game);
     inv.searchParams.set('room', cfgRoom);
     inv.searchParams.set('role', 'guest');
+    if (usePeer) inv.searchParams.set('peer', '1');
     if (SHARE) inv.searchParams.set('sharecode', SHARE);
     $('inviteUrl').value = inv.toString();
     $('btnCopyInvite').addEventListener('click', function () {
@@ -709,8 +739,8 @@
       $('readyText').textContent = joined + '/' + cfg.humans + ' 已就位';
       $('wTitle').textContent = GNAME[game] + ' · 房间等待中';
       $('wSub').innerHTML = '玩家 vs 玩家 ｜ ' + (isHost ? '你是<b>房主</b>，由你设定开局规则' : '你是<b>加入的玩家</b>，规则由房主设定') +
-        ' ｜ 联机通道：' + (transport === 'net' ? '服务端房间（可跨设备）' : '本机 BroadcastChannel（同一浏览器多窗口）');
-      $('kvTransport').textContent = transport === 'net' ? '服务端 SSE 房间 · 可跨设备' : 'BroadcastChannel · 仅同浏览器';
+        ' ｜ 联机通道：' + (transport === 'net' ? '服务端房间（可跨设备）' : transport === 'peer' ? 'PeerJS 直连（可跨设备）' : '本机 BroadcastChannel（同一浏览器多窗口）');
+      $('kvTransport').textContent = transport === 'net' ? '服务端 SSE 房间 · 可跨设备' : transport === 'peer' ? 'PeerJS WebRTC 直连 · 可跨设备' : 'BroadcastChannel · 仅同浏览器';
       var myIdx = -1;
       r.forEach(function (p, i) { if (p.peer === PEER) myIdx = i; });
       $('kvSeat').textContent = myIdx < 0 ? '计算中…' : ('座位 ' + myIdx + (myIdx >= cfg.humans ? '（旁听，未进入对局）' : ''));
@@ -719,6 +749,8 @@
         ? '<b style="color:#e08585">⚠ 检测到 ' + nHost + ' 个房主</b>：请只保留一个窗口用「创建房间」，其他窗口改用「加入房间」。'
         : (transport === 'net'
           ? '最省事的做法：点上方<b>「复制邀请链接」</b>发给对方，打开即可直达本房间。也可以让对方打开<b>同一个站点地址</b>，输入房间号 <b>' + cfgRoom + '</b> 加入。真人座位按加入顺序自动分配；多余窗口会显示为旁听。'
+          : transport === 'peer'
+          ? '点上方<b>「复制邀请链接」</b>发给另一台设备，打开即可直达本房间。PeerJS 直连不经过 Node 服务；如果双方网络存在对称 NAT，可能连接失败，需要后续加 TURN。'
           : '请在<b>同一个浏览器</b>再开窗口，输入房间号 <b>' + cfgRoom + '</b> 加入。BroadcastChannel 不能跨浏览器 / 跨设备。');
       if (isHost) {
         $('btnBegin').disabled = !ready;
@@ -795,7 +827,7 @@
         '&net_room=' + encodeURIComponent(cfgRoom) +
         '&net_seat=' + mySeat +
         '&net_match=' + encodeURIComponent(match) +
-        '&net_transport=' + (transport === 'net' ? 'net' : 'local') +
+        '&net_transport=' + encodeURIComponent(transport) +
         '&net_cfg=' + encodeURIComponent(JSON.stringify(full)));
       var frame = $('frame');
       frame.style.opacity = '0';
@@ -817,7 +849,7 @@
         /* 只在父页已拿到 bridge 源码时注入，且始终内联执行。
            绝不让 iframe 内部再发一次 bridge.js 请求：线上图片会占满连接，
            那个子请求一旦排队，客机就会在 15 秒后误报「棋盘加载超时」。 */
-        if (!bridgeCode) return;
+        if (!bridgeCode || (transport === 'peer' && !peerCode)) return;
         var doc;
         try { doc = frame.contentDocument; } catch (e) { return; }
         if (!doc || !doc.body || doc.readyState === 'loading') return;
@@ -828,7 +860,7 @@
         try {
           var tag = doc.createElement('script');
           tag.id = '__mygames_bridge';
-          tag.textContent = bridgeCode;
+          tag.textContent = (transport === 'peer' ? peerCode + '\n' : '') + bridgeCode;
           doc.body.appendChild(tag);
         } catch (e) { injected = false; bridgeFail('注入联机桥失败：' + (e && e.message)); }
       }
@@ -843,6 +875,7 @@
         try { rs = frame.contentDocument ? frame.contentDocument.readyState : '?'; } catch (e) {}
         var why;
         if (!bridgeCode) why = '联机桥源码还没取到（' + (bridgeErr || '网络较慢') + '），请点「重新载入」';
+        else if (transport === 'peer' && !peerCode) why = 'PeerJS 库还没取到（' + (peerErr || '网络较慢') + '），请点「重新载入」';
         else if (!injected) why = '游戏页未就绪（' + rs + '），通常是访问凭证失效；请用房主的「邀请链接」重新进入';
         else why = '联机桥已注入但未回报就绪（' + rs + '）';
         bridgeFail('棋盘加载超时 · ' + why);
@@ -1029,49 +1062,133 @@
     }
 
     /* ── 环境探测 → 建立房间通道 ── */
-    fetch(withShare('../ping'), { cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
-      .then(function (j) { if (!j || !j.ok) return Promise.reject(new Error('bad')); transport = 'net'; })
-      .catch(function () { transport = 'local'; })
-      .then(function () {
-        if (transport === 'net') {
-          var es = new EventSource(withShare('../room?room=' + encodeURIComponent(LCH) + '&peer=' + PEER));
-          es.onmessage = function (ev) { try { onLobby(JSON.parse(ev.data)); } catch (e) {} };
-          es.onopen = function () {
-            setConn('已连接 · 现在可以把邀请链接发给其他玩家', 'ok');
-            /* 重连成功后重新打招呼，恢复服务端与对端的在线名单 */
-            announce();
-          };
-          es.onerror = function () { setConn('连接中断，浏览器正在自动重连…（请确认用的是完整邀请链接）', 'bad'); };
-          sendLobby = function (m) {
-            /* 房间消息虽小，也不用 keepalive：Chromium 的 keepalive 配额是累计的，
-               与对战层共用同一配额，可能把状态快照挤掉。失败时重投两次。 */
-            var body = JSON.stringify(m);
-            var url = withShare('../room?room=' + encodeURIComponent(LCH));
-            function post(n) {
-              fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body })
-                .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); })
-                .catch(function () { if (n > 0) setTimeout(function () { post(n - 1); }, 450); });
-            }
-            post(2);
-          };
-          closeLobby = function () { try { es.close(); } catch (e) {} };
-        } else {
-          var bc = new BroadcastChannel(LCH);
-          bc.onmessage = function (ev) { onLobby(ev.data); };
-          sendLobby = function (m) { bc.postMessage(m); };
-          closeLobby = function () { try { bc.close(); } catch (e) {} };
-          setConn('本机 BroadcastChannel · 仅限同一浏览器的多个窗口', 'ok');
-        }
-        renderSettings();
+    var lobbyRtc = null, lobbyHostConn = null, lobbyConns = {};
+    var LOBBY_HOST_ID = 'mg-' + game + '-' + cfgRoom + '-lobby';
+
+    function setupPeerLobby() {
+      if (typeof Peer !== 'function') {
+        setConn('PeerJS 库未加载，退回同浏览器模式', 'bad');
+        transport = 'local';
+        setupLocalLobby();
+        return;
+      }
+      if (isHost) PEER = LOBBY_HOST_ID;
+      try { lobbyRtc = new Peer(PEER, { debug: 0 }); }
+      catch (e) { setConn('PeerJS 初始化失败：' + ((e && e.message) || e), 'bad'); return; }
+      setConn('PeerJS 信令连接中…');
+      lobbyRtc.on('open', function (id) {
+        PEER = id;
+        setConn('PeerJS 直连已启用 · 可跨设备', 'ok');
         announce();
-        lobbyTimers.push(setInterval(presence, 1000));
-        /* 浏览器切回标签页时立即补一次在线状态，抵消后台标签页的定时器节流 */
-        document.addEventListener('visibilitychange', function () { if (!document.hidden) presence(); });
-        window.addEventListener('focus', presence);
-        paint();
-        lobbyTimers.push(setInterval(paint, 700));
+        if (!isHost && !started) connectLobbyHost();
       });
+      lobbyRtc.on('connection', function (conn) {
+        if (!isHost) return;
+        attachLobbyConn(conn);
+      });
+      lobbyRtc.on('error', function (e) {
+        var type = (e && e.type) || 'error';
+        if (type === 'peer-unavailable') { if (!isHost) setTimeout(connectLobbyHost, 2500); return; }
+        if (type === 'unavailable-id') { setConn('房间号已被占用，请返回换一个房间', 'bad'); return; }
+        setConn('PeerJS ' + type + '：' + ((e && e.message) || ''), 'bad');
+      });
+      sendLobby = function (m) {
+        if (isHost) {
+          Object.keys(lobbyConns).forEach(function (k) {
+            var c = lobbyConns[k];
+            if (c && c.open) { try { c.send(m); } catch (e) {} }
+          });
+        } else if (lobbyHostConn && lobbyHostConn.open) {
+          try { lobbyHostConn.send(m); } catch (e) {}
+        }
+      };
+      closeLobby = function () {
+        try { if (lobbyHostConn) lobbyHostConn.close(); } catch (e) {}
+        try { if (lobbyRtc) lobbyRtc.destroy(); } catch (e) {}
+      };
+    }
+
+    function attachLobbyConn(conn) {
+      lobbyConns[conn.peer] = conn;
+      conn.on('data', function (m) { onLobby(m); });
+      conn.on('close', function () { delete lobbyConns[conn.peer]; paint(); });
+      conn.on('error', function (e) { console.warn('[peer] lobby conn', e); });
+      conn.on('open', function () { presence(); });
+    }
+    function connectLobbyHost() {
+      if (isHost || started || !lobbyRtc || lobbyRtc.destroyed) return;
+      if (lobbyHostConn && lobbyHostConn.open) return;
+      try {
+        lobbyHostConn = lobbyRtc.connect(LOBBY_HOST_ID, { reliable: true });
+        lobbyHostConn.on('open', function () {
+          setConn('PeerJS 已连接房主 · 可跨设备', 'ok');
+          announce();
+        });
+        lobbyHostConn.on('data', function (m) { onLobby(m); });
+        lobbyHostConn.on('close', function () {
+          setConn('连接断开，正在重试…', 'bad');
+          setTimeout(connectLobbyHost, 2000);
+        });
+        lobbyHostConn.on('error', function (e) { console.warn('[peer] lobby host conn', e); });
+      } catch (e) { setTimeout(connectLobbyHost, 2500); }
+    }
+    function setupLocalLobby() {
+      var bc = new BroadcastChannel(LCH);
+      bc.onmessage = function (ev) { onLobby(ev.data); };
+      sendLobby = function (m) { bc.postMessage(m); };
+      closeLobby = function () { try { bc.close(); } catch (e) {} };
+      setConn('本机 BroadcastChannel · 仅限同一浏览器的多个窗口', 'ok');
+    }
+
+    function finishLobby() {
+      renderSettings();
+      announce();
+      lobbyTimers.push(setInterval(presence, 1000));
+      /* 浏览器切回标签页时立即补一次在线状态，抵消后台标签页的定时器节流 */
+      document.addEventListener('visibilitychange', function () { if (!document.hidden) presence(); });
+      window.addEventListener('focus', presence);
+      paint();
+      lobbyTimers.push(setInterval(paint, 700));
+    }
+
+    if (usePeer) {
+      transport = 'peer';
+      setupPeerLobby();
+      finishLobby();
+    } else {
+      fetch(withShare('../ping'), { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+        .then(function (j) { if (!j || !j.ok) return Promise.reject(new Error('bad')); transport = 'net'; })
+        .catch(function () { transport = 'local'; })
+        .then(function () {
+          if (transport === 'net') {
+            var es = new EventSource(withShare('../room?room=' + encodeURIComponent(LCH) + '&peer=' + PEER));
+            es.onmessage = function (ev) { try { onLobby(JSON.parse(ev.data)); } catch (e) {} };
+            es.onopen = function () {
+              setConn('已连接 · 现在可以把邀请链接发给其他玩家', 'ok');
+              /* 重连成功后重新打招呼，恢复服务端与对端的在线名单 */
+              announce();
+            };
+            es.onerror = function () { setConn('连接中断，浏览器正在自动重连…（请确认用的是完整邀请链接）', 'bad'); };
+            sendLobby = function (m) {
+              /* 房间消息虽小，也不用 keepalive：Chromium 的 keepalive 配额是累计的，
+                 与对战层共用同一配额，可能把状态快照挤掉。失败时重投两次。 */
+              var body = JSON.stringify(m);
+              var url = withShare('../room?room=' + encodeURIComponent(LCH));
+              function post(n) {
+                fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body })
+                  .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); })
+                  .catch(function () { if (n > 0) setTimeout(function () { post(n - 1); }, 450); });
+              }
+              post(2);
+            };
+            closeLobby = function () { try { es.close(); } catch (e) {} };
+          } else {
+            setupLocalLobby();
+          }
+          finishLobby();
+        });
+    }
   }
 })();
 </script>

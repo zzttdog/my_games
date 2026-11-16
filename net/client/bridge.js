@@ -34,7 +34,9 @@
   var MATCH = Q.get('net_match') || 'm0';
   var SEAT = parseInt(Q.get('net_seat'), 10);
   if (!(SEAT >= 0 && SEAT <= 3)) SEAT = 0;
-  var MODE = Q.get('net_transport') === 'net' ? 'net' : 'local';
+  var MODE = Q.get('net_transport') === 'net'
+    ? 'net'
+    : (Q.get('net_transport') === 'peer' ? 'peer' : 'local');
   var PEER = 'b' + Math.random().toString(36).slice(2, 10);
   var CHANNEL = 'mygames_' + GAME + '_' + ROOM + '_' + MATCH;
 
@@ -685,7 +687,88 @@
    * 这些请求都发生在页面存活期间，本就不需要 keepalive。
    * ────────────────────────────────────────────────────── */
   var emit = function () {};
-  if (MODE === 'net') {
+  if (MODE === 'peer') {
+    if (typeof Peer !== 'function') {
+      tell('error', 'PeerJS 库未加载');
+      return;
+    }
+    var rtcHostId = 'mg-' + GAME + '-' + ROOM + '-bridge';
+    var rtcPeer = null, rtcHostConn = null, rtcConns = {};
+    function rtcData(d) {
+      if (typeof d === 'string') {
+        try { d = JSON.parse(d); } catch (e) { return; }
+      }
+      incoming(d);
+    }
+    function rtcAttach(conn) {
+      if (!conn) return;
+      rtcConns[conn.peer] = conn;
+      conn.on('data', rtcData);
+      conn.on('close', function () { delete rtcConns[conn.peer]; });
+      conn.on('error', function (e) { console.warn('[peer] bridge conn', e); });
+      conn.on('open', function () {
+        if (A.ready()) { try { broadcastState(); } catch (e) {} }
+      });
+    }
+    function rtcConnectHost() {
+      if (IS_HOST || !rtcPeer || rtcPeer.destroyed) return;
+      if (rtcHostConn && rtcHostConn.open) return;
+      try {
+        rtcHostConn = rtcPeer.connect(rtcHostId, { reliable: true });
+        rtcHostConn.on('open', function () {
+          tell('peer-connected', '已连接房主');
+          send({ kind: 'hello', seen: lastRev });
+        });
+        rtcHostConn.on('data', rtcData);
+        rtcHostConn.on('close', function () {
+          tell('waiting');
+          setTimeout(rtcConnectHost, 2000);
+        });
+        rtcHostConn.on('error', function (e) { console.warn('[peer] guest bridge conn', e); });
+      } catch (e) { setTimeout(rtcConnectHost, 2500); }
+    }
+    try {
+      rtcPeer = IS_HOST ? new Peer(rtcHostId, { debug: 0 }) : new Peer(PEER, { debug: 0 });
+    } catch (e) {
+      tell('error', 'PeerJS 初始化失败：' + ((e && e.message) || e));
+      return;
+    }
+    emit = function (m) {
+      if (IS_HOST) {
+        Object.keys(rtcConns).forEach(function (k) {
+          var c = rtcConns[k];
+          if (c && c.open) { try { c.send(m); } catch (e) {} }
+        });
+      } else if (rtcHostConn && rtcHostConn.open) {
+        try { rtcHostConn.send(m); } catch (e) {}
+      }
+    };
+    rtcPeer.on('open', function (id) {
+      PEER = id;
+      tell('peer-ready', 'PeerJS');
+      if (IS_HOST) {
+        if (A.ready()) { try { broadcastState(); } catch (e) {} }
+      } else {
+        rtcConnectHost();
+      }
+    });
+    rtcPeer.on('connection', function (conn) {
+      if (IS_HOST) rtcAttach(conn);
+    });
+    rtcPeer.on('error', function (e) {
+      var type = (e && e.type) || 'error';
+      if (type === 'peer-unavailable') {
+        if (!IS_HOST) setTimeout(rtcConnectHost, 2500);
+        return;
+      }
+      if (type === 'unavailable-id') {
+        tell('error', 'PeerJS 房间桥接 ID 已被占用');
+        return;
+      }
+      tell('error', 'PeerJS ' + type + '：' + ((e && e.message) || ''));
+    });
+    window.addEventListener('pagehide', function () { try { rtcPeer.destroy(); } catch (e) {} });
+  } else if (MODE === 'net') {
     var es = new EventSource('../net/room?room=' + encodeURIComponent(CHANNEL) + '&peer=' + PEER);
     es.onmessage = function (ev) { try { incoming(JSON.parse(ev.data)); } catch (e) {} };
     es.onerror = function () { tell('waiting'); };
