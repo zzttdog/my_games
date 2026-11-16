@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>姬路城 The White Castle — 网页版</title>
+<link rel="stylesheet" href="css/style.css?v=19">
+<!-- 开局资源预加载：放在 <head> 里，遮罩早于任何卡图请求出现；清单由 net/gen-imglist.py 生成 -->
+<script src="../net/client/games.js"></script>
+<script src="../net/client/img-list.js"></script>
+<script src="../net/client/preload.js"></script>
+</head>
+<body>
+<div id="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="mon">白</div>
+      <div class="brand-text">
+        <h1>姬路城 <em>白鹭城</em></h1>
+        <p>THE WHITE CASTLE</p>
+      </div>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="top-actions">
+      <button class="ghost" id="btnRules">规则</button>
+      <button class="ghost" id="btnBoard">原版棋盘</button>
+      <button class="ghost" id="btnRestart">重开</button>
+      <span class="zoom-ctrl">
+        <button class="ghost" id="btnZoomOut" title="缩小版图">－</button>
+        <span id="zoomLabel" class="zoom-label" title="点击恢复 100%">100%</span>
+        <button class="ghost" id="btnZoomIn" title="放大版图">＋</button>
+      </span>
+    </div>
+  </header>
+
+  <main id="game" class="game hidden">
+    <section class="stage">
+      <section class="board" id="board"></section>
+      <section class="players" id="players"></section>
+    </section>
+
+    <aside class="side">
+      <div class="log-wrap stats-wrap">
+        <h3>玩家数据 <span>STATUS</span></h3>
+        <div id="pstats" class="pstats"></div>
+      </div>
+      <div class="log-wrap">
+        <h3>记录 <span>LOG</span></h3>
+        <div id="log" class="log"></div>
+      </div>
+    </aside>
+  </main>
+
+  <section id="setup" class="setup">
+    <div class="setup-card">
+      <div class="seal">白</div>
+      <h2>姬路城</h2>
+      <p class="setup-sub">THE WHITE CASTLE</p>
+
+      <div class="setup-row">
+        <label>玩家人数</label>
+        <div class="seg" data-group="players">
+          <button data-v="2" class="on">2 人</button>
+          <button data-v="3">3 人</button>
+          <button data-v="4">4 人</button>
+        </div>
+      </div>
+      <div class="setup-row">
+        <label>你的家族</label>
+        <div class="seg seats" data-group="seat"></div>
+      </div>
+      <div class="setup-row">
+        <label>先后手</label>
+        <div class="seg" data-group="order">
+          <button data-v="first" class="on">先手</button>
+          <button data-v="second">后手</button>
+          <button data-v="random">随机</button>
+        </div>
+      </div>
+      <div class="setup-row">
+        <label>AI 难度</label>
+        <div class="seg" data-group="diff">
+          <button data-v="easy">简单</button>
+          <button data-v="normal" class="on">普通</button>
+          <button data-v="hard">困难</button>
+        </div>
+      </div>
+
+      <button id="btnStart" class="primary">入 局</button>
+      <p class="setup-note" id="setupNote">3 轮 × 每玩家 3 回合 · 仅基础规则</p>
+    </div>
+  </section>
+
+</div>
+
+<div id="modalRoot" class="modal-root hidden"></div>
+<div id="toast" class="toast"></div>
+
+<script src="js/data.js?v=19"></script>
+<script src="js/engine.js?v=19"></script>
+<script src="js/ai.js?v=19"></script>
+<script src="js/ui.js?v=19"></script>
+<!-- 本地存档：放在所有游戏脚本之后，单机与联机(iframe)共用；联机客机会自行禁用 -->
+<script src="../net/client/save.js"></script>
+</body>
+</html>

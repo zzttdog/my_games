@@ -1,0 +1,35 @@
+/* 手机端「按比例缩放」外壳：把单机版游戏整页按最小可用宽度排版，再等比缩到屏幕宽。
+     游戏文件本身一个字都不改，这里只做显示层缩放。 */
+  html, body { margin: 0; height: 100%; background: #14181f; overflow: hidden;
+               -webkit-text-size-adjust: 100%; }
+  #bar { height: 44px; box-sizing: border-box; display: flex; align-items: center; gap: 8px;
+         padding: 0 10px; background: #232a35; color: #e8eef7; border-bottom: 1px solid #333c4a;
+         font: 14px/1.2 system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; }
+  #bar .sp { flex: 1; }
+  #bar button { background: #2f3947; color: #e8eef7; border: 1px solid #3d4a5c; border-radius: 8px;
+                padding: 0 12px; height: 30px; font: inherit; cursor: pointer; }
+  #bar button:active { background: #3a4657; }
+  #ttl { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
+  #ratio { font-size: 12px; color: #93a3b8; font-variant-numeric: tabular-nums; }
+  #wrap { position: relative; height: calc(100% - 44px); overflow: auto;
+          -webkit-overflow-scrolling: touch; }
+  #pan { position: relative; overflow: hidden; }
+  #frame { position: absolute; left: 0; top: 0; border: 0; display: block;
+           transform-origin: 0 0; background: #0e1218; }
+  /* 开局资源预加载进度条：iframe 被等比缩小时，里面画的进度条会一起变小，
+     所以由外壳页画固定尺寸的一层，不随 transform 变化。 */
+  #premask { position: fixed; left: 0; right: 0; top: 44px; bottom: 0; z-index: 20;
+             display: none; align-items: center; justify-content: center;
+             background: #151a22; color: #e8eef7;
+             font: 14px/1.6 system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; }
+  #premask .box { width: min(340px, 84vw); padding: 26px 24px; border-radius: 14px;
+                  background: #202834; border: 1px solid #35404f; text-align: center; }
+  #premask .t { font-size: 16px; font-weight: 600; }
+  #premask .s { margin-top: 6px; font-size: 12px; color: #93a3b8; }
+  #premask .track { margin-top: 18px; height: 9px; border-radius: 9px;
+                    background: #121821; overflow: hidden; }
+  #premask .fill { height: 100%; width: 0; border-radius: 9px;
+                   background: linear-gradient(90deg, #4c9a72, #8bc34a); transition: width .18s ease; }
+  #premask .n { margin-top: 10px; font-size: 12px; color: #93a3b8;
+                font-variant-numeric: tabular-nums; }
+  #wrap.preload-lock { overflow: hidden !important; touch-action: none; }

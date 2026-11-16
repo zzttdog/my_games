@@ -1,0 +1,9 @@
+{
+  "name": "my-games-online",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Harmonies 与姬路城（含茶道扩）双游戏联机对战服务",
+  "scripts": {
+    "start": "node net/server/server.js"
+  }
+}

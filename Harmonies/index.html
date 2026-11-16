@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>自然和弦 · Harmonies 电子版</title>
+<link rel="stylesheet" href="css/game.css">
+<!-- 开局资源预加载：放在 <head> 里，遮罩早于任何卡图请求出现；清单由 net/tools/gen-imglist.py 生成 -->
+<script src="../net/client/games.js"></script>
+<script src="../net/client/img-list.js"></script>
+<script src="../net/client/preload.js"></script>
+</head>
+<body>
+<h1>自然和弦 · Harmonies</h1>
+<div class="subtitle">轮抽地形 · 立体堆叠 · 吸引动物 —— 基础 + Pulse + Crescendo</div>
+
+<div class="topbar">
+  <span>袋中标记 <b id="pouchN">-</b></span>
+  <span>动物牌堆 <b id="deckN">-</b></span>
+  <span>回合 <b id="roundN">-</b></span>
+  <span>版图 <b id="sideN">-</b></span>
+  <span>先手 <b id="firstN">-</b></span>
+  <span id="modN"></span>
+</div>
+
+<div class="layout" id="layout">
+  <!-- 左列:提示卡 + 供应区 → 拿取标记 → 操作区 → 卡面预览(结束回合按钮下方) → 日志 -->
+  <div class="col side-col">
+    <!-- 提示卡与供应区并列 -->
+    <div class="side-row">
+      <div class="card pub-aid">
+        <h3>提示卡(悬停放大)</h3>
+        <div class="card-row" id="gameAid"></div>
+      </div>
+      <div class="card pub-supply">
+        <h3>供应区(点击取一组)</h3>
+        <div id="supply"></div>
+      </div>
+    </div>
+    <div class="card hand-card">
+      <h3>手上的标记(点击选择,再点版图放置)</h3>
+      <div class="hand" id="hand"></div>
+    </div>
+    <div class="row2">
+      <button class="btn secondary" id="btnUndo">撤回上一步</button>
+      <button class="btn secondary" id="btnUndoRound">撤回至回合开始</button>
+    </div>
+    <button class="btn" id="btnEnd">结束回合</button>
+    <div class="msg" id="msg">-</div>
+    <!-- 卡面预览放在结束回合按钮下方:高度随卡面自然向下撑开,不裁剪 -->
+    <div class="card" id="previewCard" title="点击此卡片取消常驻显示">
+      <h3>卡面预览(点选卡面可常驻)</h3>
+      <div id="cardPreview"></div>
+    </div>
+    <div class="card log-card"><h3>日志</h3><div class="log" id="log"></div></div>
+  </div>
+
+  <!-- 右区:市场动物卡 + 保护区板块在版图面板上方 -->
+  <div class="col">
+    <div class="public-area">
+    <!-- 第一排(两块等高):市场动物卡 → 保护区板块 -->
+    <div class="public-row">
+      <div class="card pub-market">
+        <h3>动物卡市场(每回合 1 张 · 与保护区分开算)</h3>
+        <div class="card-row" id="market"></div>
+      </div>
+      <div class="card pub-sanct">
+        <h3>保护区板块(每回合 1 个 · 不占取卡 · 限 1 格建造)</h3>
+        <div class="card-row" id="sanctOffer"></div>
+      </div>
+    </div>
+    </div><!-- /.public-area -->
+    <!-- 版图区:按人数动态生成 -->
+    <div class="boards" id="boards"></div>
+  </div>
+</div>
+
+<div id="cardZoom"><img id="cardZoomImg" alt=""></div>
+
+<!-- 整体缩放控制 -->
+<div id="zoomCtl" title="调整界面整体大小">
+  <button id="zoomOut">−</button>
+  <span id="zoomVal">100%</span>
+  <button id="zoomIn">+</button>
+</div>
+
+<!-- 开局设置 -->
+<div class="overlay" id="setupOv">
+  <div class="modal">
+    <h2>自然和弦 · 开局设置</h2>
+    <div class="sub">你 vs AI · 规则遵循 Libellud 官方规则书(含 Crescendo 规则书 C/D 面)</div>
+    <div class="setup-cols">
+      <!-- 左列:版图提示卡 -->
+      <div class="setup-aid">
+        <label class="aid-label">版图提示卡</label>
+        <div class="aid-sub">随所选面显示 · 悬停放大</div>
+        <div class="card-row" id="aidPreview"></div>
+      </div>
+      <!-- 右列:开局设置选项 -->
+      <div class="setup-opts">
+        <div class="opt-group">
+          <label>个人版图(A/B 基础规则;C/D 为 Crescendo 官方新版图)</label>
+          <div class="opt-row" id="sideOpts">
+            <button class="opt on" data-v="A">A 面<span class="tag">最长河流</span></button>
+            <button class="opt" data-v="B">B 面<span class="tag">岛屿分割</span></button>
+            <button class="opt" data-v="C" id="sideC">C 面<span class="tag">中央空穴·26格</span></button>
+            <button class="opt" data-v="D" id="sideD">D 面<span class="tag">干旱格·25格</span></button>
+          </div>
+        </div>
+        <div class="opt-group">
+          <label>扩展模组(可任意组合)</label>
+          <label class="check-row"><input type="checkbox" id="modSpirit"> 自然之灵:开局 2 选 1 的强力个人目标卡(占 4 卡上限)</label>
+          <label class="check-row"><input type="checkbox" id="modPulse" checked> Pulse 扩展:10张新的动物卡(其图案可镜像放置)</label>
+          <label class="check-row"><input type="checkbox" id="modCres"> Crescendo 扩展:精灵卡(10 张混入牌库,紫色方块与动物同格 5 分/单独 2 分,不能与自然之灵同格) </label>
+          <label class="check-row"><input type="checkbox" id="modSanct">Crescendo 扩展:保护区牌 独立可选行动(可与动物卡同回合各拿 1 张,共享 4 张上限);持有板块可在一个格子突破一般堆叠规则,完成后相邻同色标记每格 +3 分</label>
+        </div>
+        <div class="opt-group">
+          <label>玩家人数(其余席位由 AI 接管,按顺序轮转行动)</label>
+          <div class="opt-row" id="numOpts">
+            <button class="opt on" data-v="2">2 人<span class="tag">你 + 1 AI</span></button>
+            <button class="opt" data-v="3">3 人<span class="tag">你 + 2 AI</span></button>
+            <button class="opt" data-v="4">4 人<span class="tag">你 + 3 AI</span></button>
+          </div>
+        </div>
+        <div class="opt-group">
+          <label>先后手(谁先行动)</label>
+          <div class="opt-row" id="firstOpts">
+            <button class="opt" data-v="me">你先手</button>
+            <button class="opt" data-v="ai">AI 先手</button>
+            <button class="opt on" data-v="rand">随机<span class="tag">开局抽签</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="btn" id="btnStart" style="margin-top:14px">开始游戏</button>
+  </div>
+</div>
+
+<!-- 自然之灵选择 -->
+<div class="overlay hidden" id="spiritOv">
+  <div class="modal">
+    <h2>选择你的自然之灵</h2>
+    <div class="sub">2 选 1,图案达成后放入唯一的灵方块</div>
+    <div class="spirit-pick" id="spiritPick"></div>
+  </div>
+</div>
+
+<!-- 结算 -->
+<div class="overlay hidden" id="endOv">
+  <div class="modal">
+    <h2>游戏结束</h2>
+    <div class="winner" id="winnerTxt"></div>
+    <table class="score" id="scoreTbl"></table>
+    <div class="note" id="tieNote"></div>
+    <div class="row2" style="margin-top:8px">
+      <button class="btn secondary" id="btnView">查看战局</button>
+      <button class="btn" id="btnAgain">再来一局</button>
+    </div>
+  </div>
+</div>
+<button class="btn warn hidden" id="btnEndFloat" style="position:fixed;right:16px;bottom:16px;z-index:90;width:auto;padding:10px 18px">结算 / 重新开始</button>
+
+<script src="js/data.js"></script>
+<script src="js/game.js"></script>
+<script src="js/rules.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/main.js"></script>
+<!-- 本地存档：放在所有游戏脚本之后，单机与联机(iframe)共用；联机客机会自行禁用 -->
+<script src="../net/client/save.js"></script>
+</body>
+</html>

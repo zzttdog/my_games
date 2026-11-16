@@ -1,0 +1,1026 @@
+/* ════════════════════════════════════════════════════════════════════════
+   姬路城 The White Castle —— 界面样式
+   配色：和纸 / 朱红 / 藏青 / 松绿 / 金箔
+   ------------------------------------------------------------------------
+   ★ 目录（搜「═══ 数字」可直接跳到对应段）
+     01 ═══ 设计变量（颜色 / 字体）      ← 想整体换配色改这里
+     02 ═══ 基础重置
+     03 ═══ 顶栏（标题 / 状态条 / 按钮）
+     04 ═══ 页面布局（左版图 + 右记录栏）
+     05 ═══ 主版图（实拍底图 + 叠层）
+     06 ═══ 骰子
+     07 ═══ 放骰高亮 + 黑色效果标签     ← 改黑标签样式看这里
+     08 ═══ 版图上的卡位 / 骰位 / 棋子位 ← 改元素大小看这里
+     09 ═══ 玩家面板（个人领地）
+     10 ═══ 灯笼奖励区                  ← 改叠卡/尺寸看这里
+     11 ═══ 玩家数据（右侧四排）         ← 改四排间距看这里
+     12 ═══ 记录日志
+     13 ═══ 弹窗 / 设置页
+     14 ═══ Toast / 悬浮按钮
+     15 ═══ 响应式
+
+   【单位说明】
+     cqw = 容器宽度的 1%。版图里的元素都用 cqw，底图缩放时元素跟着缩放。
+     用到 cqw 的容器必须写 container-type: inline-size（见 05 / 09 段）。
+     %   = 相对容器宽高，用来定位（left/top）。
+   【位置说明】
+     版图上每个元素「摆在哪」不写在这里，在 js/data.js 的 BOARD_LAYOUT；
+     这里只决定「长多大、什么颜色」。
+   ════════════════════════════════════════════════════════════════════════ */
+
+
+/* ═══ 01 设计变量 ══════════════════════════════════════════════════════ */
+:root {
+  /* 底色 */
+  --ink: #100e0d;          /* 最深：页面底 */
+  --ink-2: #191514;
+  --ink-3: #221d1a;
+  --paper: #f1e8d6;        /* 主文字（和纸白） */
+  --paper-dim: #c9bda6;    /* 次要文字 */
+
+  /* 强调色 */
+  --gold: #c9a45f;         /* 金箔：标题、选中、分数 */
+  --gold-soft: rgba(201, 164, 95, 0.28);
+  --vermilion: #b23a2e;    /* 朱红 */
+  --indigo: #33587c;       /* 藏青 */
+
+  /* 线条 / 面板 */
+  --line: rgba(233, 214, 175, 0.16);
+  --line-strong: rgba(233, 214, 175, 0.34);
+  --panel: rgba(24, 20, 18, 0.72);
+  --panel-2: rgba(243, 234, 214, 0.045);
+  --shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+
+  /* 字体 */
+  --serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", Georgia, serif;
+}
+
+
+/* ═══ 02 基础重置 ══════════════════════════════════════════════════════ */
+* { box-sizing: border-box; }
+
+html, body { min-height: 100%; }
+
+body {
+  margin: 0;
+  color: var(--paper);
+  font-family: var(--serif);
+  letter-spacing: 0.02em;
+  -webkit-font-smoothing: antialiased;
+  background:
+    linear-gradient(180deg, rgba(8, 7, 6, 0.82), rgba(10, 8, 7, 0.92)),
+    url("../assets/texture-dark.jpg") center / cover fixed;
+}
+
+/* 页面四周的柔和光斑（朱红 / 金 / 松绿），纯装饰 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(178, 58, 46, 0.13), transparent 42%),
+    radial-gradient(circle at 82% 8%, rgba(201, 164, 95, 0.10), transparent 45%),
+    radial-gradient(circle at 50% 120%, rgba(95, 139, 82, 0.10), transparent 55%);
+}
+
+#app {
+  position: relative;
+  z-index: 1;
+  max-width: 1720px;
+  margin: 0 auto;
+  padding: 16px 20px 48px;
+}
+
+.hidden { display: none !important; }
+
+
+/* ═══ 03 顶栏 ══════════════════════════════════════════════════════════ */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 10px 4px 14px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* 家纹圆牌 + 标题 */
+.brand { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
+
+.mon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--gold-soft);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(178, 58, 46, 0.9), #6d1f18);
+  color: #f7ecd7;
+  font-size: 20px;
+  box-shadow: 0 0 0 4px rgba(178, 58, 46, 0.10), inset 0 0 12px rgba(0, 0, 0, 0.5);
+}
+
+.brand-text h1 {
+  margin: 0;
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: 0.20em;
+  line-height: 1.1;
+}
+.brand-text h1 em {
+  margin-left: 8px;
+  font-style: normal;
+  font-size: 12px;
+  letter-spacing: 0.28em;
+  color: var(--gold);
+  opacity: 0.9;
+}
+.brand-text p {
+  margin: 3px 0 0;
+  font-size: 9.5px;
+  letter-spacing: 0.30em;
+  color: var(--paper-dim);
+  opacity: 0.65;
+}
+
+/* 状态条：轮次 / 阶段 / 当前行动者 / 操作按钮 */
+.status {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--paper-dim);
+}
+.status .pill {
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.22);
+  white-space: nowrap;
+}
+.status .pill b { color: var(--paper); font-weight: 600; letter-spacing: 0.08em; }
+.status .pill.turn { border-color: var(--gold-soft); color: var(--paper); }
+.status .pill.turn b { color: var(--gold); }
+.status .hintline { font-size: 11.5px; opacity: 0.7; }
+
+.top-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+/* 版图缩放控件 */
+.zoom-ctrl { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; padding-left: 8px; border-left: 1px solid var(--line); }
+.zoom-ctrl .ghost { padding: 4px 9px; font-size: 14px; line-height: 1; min-width: 28px; }
+.zoom-label { font-size: 11px; min-width: 38px; text-align: center; color: var(--paper-dim); cursor: pointer; user-select: none; font-variant-numeric: tabular-nums; }
+.zoom-label:hover { color: var(--paper); }
+
+/* 通用按钮 */
+button {
+  font-family: var(--serif);
+  color: var(--paper);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, border-color 0.18s, transform 0.12s;
+}
+button:hover { border-color: var(--gold); color: #ffe9bd; }
+button:active { transform: translateY(1px); }
+button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.ghost { padding: 7px 14px; font-size: 12px; letter-spacing: 0.14em; white-space: nowrap; }
+
+
+/* ═══ 04 页面布局 ══════════════════════════════════════════════════════
+   两栏：左边「版图 + 玩家面板」，右边「玩家数据 + 记录」。
+   想加宽右侧栏：把下面的 300px 改大（比如 340px）。 */
+.game {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 12px;
+  align-items: start;
+}
+
+.stage { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+
+.board { display: block; }
+/* 版图缩放 >100% 时允许横向滚动，避免溢出右栏 */
+#board { overflow-x: auto; padding-bottom: 4px; }
+/* 个人面板与版图共用 --board-scale：缩放时领地盘、卡牌、骰位整体等比变化 */
+#players { width: calc(100% * var(--board-scale, 1)); }
+/* 放大时容器溢出，整列横向滚动兜底（不影响右侧数据栏） */
+.stage { overflow-x: auto; }
+
+/* 玩家面板容器：列数由 js/ui.js 按人数写内联 style（2/3 人一行，4 人 2×2） */
+.players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 10px;
+}
+
+.side { position: sticky; top: 10px; }
+
+
+/* ═══ 05 主版图（实拍底图 + 叠层）══════════════════════════════════════
+   .bwrap 是「布局基准」：宽度撑满，高度按底图宽高比（data.js 的 ratio）。
+   里面所有元素都用 % 定位 + cqw 定尺寸，所以缩放窗口时整体等比缩放。 */
+.bwrap {
+  position: relative;
+  width: calc(100% * var(--board-scale, 1));
+  transition: width .12s ease;
+  container-type: inline-size;      /* ★ 让内部 cqw 以「版图宽度」为基准 */
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #0b0908;
+}
+.bwrap + .bwrap { margin-top: -1px; }
+
+/* 底图必须和容器完全重合 */
+.bwrap .bimg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: fill;
+}
+
+/* 左上角「基础版图」小字 */
+.blabel {
+  position: absolute;
+  left: .5cqw;
+  top: .33cqw;
+  font-size: .67cqw;
+  letter-spacing: .18em;
+  color: rgba(243, 234, 214, .45);
+  opacity: .5;
+  pointer-events: none;
+}
+
+/* 所有叠层的通用外壳：以 left/top 指定的点为中心 */
+.bslot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* ═══ 06 骰子 ══════════════════════════════════════════════════════════
+   ★ 想改骰子大小只改这三个变量：
+       --die     版图上的骰子
+       --die-sm  桥上的骰子
+       --die-big 弹窗里的骰子（目前只在预览用）
+     颜色在下面 .die.c-xxx 四条里改。 */
+:root {
+  --die: 3.9cqw;
+  --die-sm: 2.6cqw;
+  --die-big: 4.7cqw;
+}
+
+.die {
+  position: relative;
+  flex: 0 0 auto;
+  width: var(--die);
+  height: var(--die);
+  aspect-ratio: 1 / 1;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.22), 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+/* 三种骰色（对应 data.js 的 DIE_COLORS） */
+.die.c-coral { background: linear-gradient(150deg, #d06a51, #a63d2c); color: #fff3e8; }
+.die.c-black { background: linear-gradient(150deg, #4a4441, #211e1c); color: #e8e0d2; border-color: #5a534e; }
+.die.c-white { background: linear-gradient(150deg, #f6efdd, #cdc3ad); color: #2a241f; }
+.die.c-green { background: linear-gradient(150deg, #86ab72, #4f7a45); color: #f2f7ea; }
+
+/* 尺寸档位 */
+.die.sm, .die.bsm { width: var(--die-sm); height: var(--die-sm); }
+.die.big { width: var(--die-big); height: var(--die-big); }
+.die.bsm { font-size: 1cqw; }          /* 桥上的小骰：字号也跟着版图缩放 */
+
+/* 可点选的桥端骰子 */
+.bslot.bdie { width: 2.5cqw; height: 2.5cqw; }
+.bslot.bdie.pickable { cursor: pointer; }
+.bslot.bdie.pickable .die {
+  outline: 2px solid var(--gold);
+  box-shadow: 0 0 12px rgba(201, 164, 95, .85);
+}
+
+/* 桥左端那颗骰子上方的小「灯」字：提示取它＝先结算灯笼区 */
+.lantern-mark {
+  position: absolute;
+  top: -1cqw;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: .67cqw;
+  letter-spacing: .1em;
+  color: var(--gold);
+}
+
+/* 同格里叠多颗骰子（3–4 人局一个位置可放 2 颗） */
+.dice-stack { display: flex; gap: .17cqw; align-items: center; justify-content: center; }
+
+
+/* ═══ 07 放骰高亮 + 黑色高亮块 ═══════════════════════════════════════
+   版图上亮起黑底高亮 + 金色虚线框的格子就是 .bslot.hot。
+   两段各管一件事：
+     .bslot.hot          → 鼠标变手型
+     .bslot.hot::before  → 黑色半透明高亮块（铺满格子，无文字；要改大小/深浅看这里）
+     .bslot.hot::after   → 那圈闪烁的黄色虚线框（压在黑块之上）
+     .bslot.hot:hover    → 悬停变亮
+   ★ 曾用于显示「这一步能拿到的效果」文字（content: attr(data-hint)，由
+     js/ui.js 的 hotSlot() 从 engine.js placeTargets() 的 label 传入）；
+     现已按需求去掉文字，只保留黑块 + 金框。若想恢复文字，把 ::before
+     的 content 改回 attr(data-hint) 并加回字体/内边距/定位样式即可。 */
+.bslot.hot { cursor: pointer; border-radius: 6px; }
+
+.bslot.hot::before {
+  content: '';                    /* 去掉文字：不再显示效果标签，只作黑色高亮填充 */
+  position: absolute;
+  inset: 0;                       /* 与 .bslot.hot::after（金色虚线框）同尺寸，铺满格子 */
+  z-index: 4;                     /* 低于 ::after 的金色虚线框（z-index:5），让金框压在黑块之上 */
+  border-radius: 6px;
+  background: rgba(18, 14, 10, .55);/* 黑色半透明填充；想更实把 .55 调大、想更淡调小 */
+  pointer-events: none;
+}
+
+.bslot.hot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 5;                    /* 压在黑块（::before, z-index:4）之上，保留金色虚线框可见 */
+  border: 2px dashed #ffd76a;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), 0 0 10px rgba(255, 215, 106, .55);
+  pointer-events: none;
+  animation: slotpulse 1.6s infinite;
+}
+
+.bslot.hot:hover { background: rgba(255, 214, 102, .28); }
+.bslot.hot:hover::after {
+  border-color: #fff3c4;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, .6), 0 0 18px rgba(255, 235, 160, .9);
+}
+
+@keyframes slotpulse { 0%, 100% { opacity: .5 } 50% { opacity: 1 } }
+
+
+/* ═══ 08 版图上的卡位 / 骰位 / 棋子位 ═════════════════════════════════
+   三类锚点各占独立尺寸，互不重叠：
+     .die-slot   骰子落点（下面再放 .die）
+     .card-slot  卡图落点（里面放 .bcard 或 .card-empty）
+     .piece-row  棋子落点（园丁 / 武士 / 家臣的圆点）
+   ★ 想改「房间卡 / 城郊卡 / 庭院卡 / 训练场」的大小，改本节对应的
+     width / height（单位 cqw）。位置在 data.js 的 BOARD_LAYOUT。 */
+.die-slot { width: 4.4cqw; height: 4.4cqw; }
+.die-slot::before {
+  content: '';
+  position: absolute;
+  inset: -6%;
+  border: 1px dashed rgba(233, 216, 178, .34);
+  border-radius: 4px;
+  pointer-events: none;
+}
+.die-slot .die { font-size: 1.6cqw; }
+
+.card-slot {
+  z-index: 2;
+  border-radius: 4px;
+  outline: 1px solid rgba(201, 164, 95, .45);
+  outline-offset: 1px;
+}
+
+/* 卡图：铺满卡位 */
+.bcard {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 2px;
+  background: #e8e2d4;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, .6);
+}
+.bcard.noimg {
+  background: rgba(10, 8, 7, .55);
+  border: 1px dashed rgba(201, 164, 95, .4);
+  box-shadow: none;
+}
+.card-empty {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 1px dashed rgba(233, 216, 178, .30);
+  border-radius: 4px;
+  background: rgba(12, 10, 8, .18);
+}
+
+/* 卡位尺寸 */
+.bslot.room-card, .bslot.room-card.empty { width: 10.0cqw; height: 6.5cqw; }  /* 天守阁房间卡（横放） */
+.bslot.out-card { width: 7.0cqw; height: 10.5cqw; }                            /* 城郊卡（竖放） */
+.bslot.cy-card { width: 10.0cqw; height: 6.5cqw; }                             /* 庭院卡（横放） */
+
+.bslot.room-card .bcard { position: static; transform: none; object-fit: contain; border-radius: 3px; }
+.bslot.cy-card .bcard { position: static; transform: none; object-fit: contain; border-radius: 3px; }
+.bslot.out-card { outline: none; }
+.bslot.out-card .bcard {
+  position: static;
+  transform: none;
+  object-fit: fill;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+/* 城郊卡自己的骰位（卡正下方那个小方块） */
+.out-die { width: 2.2cqw; height: 2.2cqw; }
+
+/* 训练场 3 区域：左半放板块，右半留给武士棋子 */
+.bslot.train-area {
+  /* width 不再写死，交给下面 cnt1 / cnt2 决定 */
+  height: 4.8cqw;
+  overflow: hidden;        /* 可选：万一略小就裁掉，绝不溢出框外 */
+  padding: .22cqw;
+  border: 1px solid rgba(201, 164, 95, .3);
+  border-radius: 3px;
+  background: rgba(10, 8, 7, .2);
+}
+.bslot.train-area.cnt1 { width: 5.8cqw; }   /* 1 个标记：紧包 */
+.bslot.train-area.cnt2 { width: 10.5cqw; } 
+
+.bslot.train-area .tr-tiles {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .15cqw;
+}
+.bslot.train-area .tr-tile { height: 88%; position: relative; display: flex; }
+.bslot.train-area .trthumb {
+  height: 100%;
+  width: auto;
+  max-width: 15cqw;
+  object-fit: contain;
+  border-radius: 2px;
+}
+/* 蓝面朝上时右上角的小蓝点 */
+.tr-tile .side-b {
+  position: absolute;
+  right: -2px;
+  top: -2px;
+  width: .5cqw;
+  height: .5cqw;
+  border-radius: 50%;
+  background: #2f5378;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .5);
+}
+
+/* 房间里的印刷标记（data.js 的 MARKERS） */
+.bslot.mk-slot { width: 3.2cqw; height: 3.2cqw; z-index: 1; }
+.bslot.mkcell { width: 3.0cqw; height: 3.0cqw; z-index: 4; }
+.mkimg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 2px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .6));
+}
+
+/* 棋子排：园丁 / 武士 / 家臣各一排小圆点 */
+.piece-row { gap: .17cqw; flex-wrap: nowrap; z-index: 3; }
+.piece-row::before {
+  content: '';
+  position: absolute;
+  inset: -4px -6px;
+  z-index: -1;
+  border-radius: 999px;
+  background: rgba(10, 8, 7, .30);
+  pointer-events: none;
+}
+.piece-row .tok { width: .68cqw; height: .68cqw; }
+
+.tok {
+  display: inline-block;
+  width: 1.0cqw;
+  height: 1.0cqw;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .5);
+}
+
+/* 卡图缩略图（弹窗里选卡、训练场板块共用） */
+.art-thumb {
+  flex: 0 0 auto;
+  width: 80px;
+  height: 60px;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+  background-color: #e8e2d4;
+  background-repeat: no-repeat;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+.art-thumb.file { width: 38px; height: 58px; background-size: cover; background-position: center; }
+.art-thumb.file.big { width: 66px; height: 100px; }
+.art-thumb.file.wide { width: 84px; height: 60px; }
+.art-thumb.file.card { width: 46px; height: 70px; }
+
+
+/* ═══ 09 玩家面板（个人领地）═══════════════════════════════════════════
+   每个玩家一块 .pcard，里面 .pwrap 是个人领地图（同样是 cqw 基准），
+   底部 .pbar 是四排数值。
+   ★ 面板内的卡 / 骰 / 骰位大小都用 cqw，2/3/4 人局面板宽度不同会自动缩放。 */
+.pcard {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--pc, var(--gold));    /* --pc 由 ui.js 写入玩家色 */
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(12, 10, 9, .5);
+}
+.pcard.active { box-shadow: 0 0 0 1px var(--pc), 0 0 18px rgba(201, 164, 95, .18); }
+
+.pwrap {
+  position: relative;
+  width: 100%;
+  container-type: inline-size;      /* ★ 面板内 cqw 以「面板宽度」为基准 */
+}
+.pimg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* 三条队列上的骰子（位置来自 data.js 的 domain.rows / dieX） */
+.pdice { position: absolute; transform: translate(-50%, -50%); }
+.pwrap .die.sm { width: 6cqw; height: 6cqw; }
+.pempty {
+  display: block;
+  width: 6cqw;
+  height: 6cqw;
+  border: 1px dashed rgba(201, 164, 95, .35);
+  border-radius: 3px;
+}
+
+/* 行动卡槽（个人版图右侧那个大卡位） */
+.pcard-slot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  max-width: none;
+  padding: 2px 4px;
+  border: 1px solid rgba(201, 164, 95, .35);
+  border-radius: 3px;
+  background: rgba(10, 8, 7, .74);
+  color: #f0e4c8;
+  font-size: 8px;
+  text-align: center;
+}
+.pcard-slot span { display: block; color: #b7a680; }
+.pempty2 { color: #8b8172; }
+
+/* ★ 行动卡尺寸：宽 = 面板宽度的 15%，高按卡牌比例 34:48 算出来
+   —— 想放大行动卡，改这两个 cqw 就行（2/3/4 人局会一起缩放） */
+.art-thumb.file.pact {
+  width: 17cqw;
+  height: 24cqw;
+  margin: 0 auto 2px;
+}
+
+/* 个人领地的 3 个可点击骰位（当前玩家才亮） */
+.bslot.domslot {
+  width: 9cqw;
+  height: 9cqw;
+  z-index: 5;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+}
+.bslot.domslot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px dashed #e8c987;
+  border-radius: 6px;
+  box-shadow: 0 0 8px rgba(232, 201, 135, .55) inset;
+}
+.bslot.domslot:hover { background: rgba(255, 215, 120, .3); }
+
+
+/* ═══ 10 灯笼奖励区 ════════════════════════════════════════════════════
+   位置  ：js/data.js → BOARD_LAYOUT.domain.base.lantern（整条区域的左上角）
+   形态  ：每张卡背【完整显示】并【逆时针转 90°】横躺，后一张压在前一张上面
+   尺寸  ：--lan-w    一张卡背【旋转前】的宽
+           --lan-h    一张卡背【旋转前】的高（约 1 : 1.4 的卡牌比例）
+           --lan-step ★ 每张露出多少＝相邻两张的横向间距
+                        数值越小，后一张盖得越多（建议 2.6cqw ~ 5.0cqw）
+   叠放  ：靠 .plantern + .plantern 的负 margin 实现；DOM 里靠后的元素天然画在
+           靠前元素上面，所以「后拿到的卡压在前面卡上」不用写 z-index。
+   溢出  ：★ 2026-11 改 —— 不再截断成「+N」计数片。所有卡都渲染进条里，
+           由 .plantern-strip 的 overflow:hidden 按像素裁掉越出右边界的【部分】：
+           框内的卡完整显示，最后一张只露出留在框里的一截，而不是整张卡消失。 */
+:root {
+  --lan-w: 18.0cqw;     /* 卡背【旋转前】的宽 */
+  --lan-h: 26.0cqw;     /* 卡背【旋转前】的高 */
+  --lan-step: 5.2cqw;   /* ★ 每张露出多少（改这一个数就能调「盖住多少」） */
+}
+
+.plantern-strip {
+  position: absolute;
+  right: 1.2%;                      /* 位置由 ui.js 按 data.js 的 lantern 覆盖，这里只是默认值 */
+  display: flex;
+  flex-direction: row;              /* 从左到右：最早的卡在左，最新的在右 */
+  flex-wrap: nowrap;                /* 一行排开，不换行（叠放本来就省地方） */
+  align-items: flex-start;
+  z-index: 3;
+  /* ★ 越界卡片按像素裁掉右侧多余部分，框内的卡完整保留；不再有「+N」片 */
+  overflow: hidden;
+}
+
+.plantern {
+  position: relative;
+  flex: 0 0 auto;
+  width: var(--lan-h);              /* 旋转后：宽 = 原卡高 */
+  height: var(--lan-w);             /* 旋转后：高 = 原卡宽 */
+  border-radius: 3px;
+  overflow: hidden;
+  background: #1a1512;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, .7), 0 0 0 1px rgba(0, 0, 0, .55);
+}
+/* 后一张压在前一张上：负 margin 把下一张往左拉，只留 --lan-step 露出来 */
+.plantern + .plantern { margin-left: calc(var(--lan-step) - var(--lan-h)); }
+
+.plantern img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--lan-w);              /* 旋转前的尺寸 */
+  height: var(--lan-h);
+  transform: translate(-50%, -50%) rotate(-90deg);   /* 逆时针 90° */
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+/* 法令卡没有卡面图时用文字牌面（glyph 来自 data.js 的 DECREE_CARDS）。
+   文字也要跟着转 -90°，否则整条里只有它是正的。 */
+.plantern.is-decree { background: linear-gradient(160deg, #f4e8c9, #d8c091); }
+.plantern-glyph {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-90deg);
+  color: #3a2f21;
+  font-size: 2.2cqw;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+/* 溢出不再用「+N」片：所有卡都渲染，越界部分由 .plantern-strip 裁掉。 */
+
+
+/* ═══ 11 玩家数据（右侧四排）═══════════════════════════════════════════
+   四排固定结构（内容在 js/ui.js 的 .prow r1~r4）：
+     ① 玩家名 / 金扇 / 红扇 / 总分
+     ② 钱 / 家纹 / 影响力 / 铁·食·珠
+     ③ 家臣（门/地/使/大）/ 武士 / 园丁
+     ④ 灯笼区（张数 + 汇总图标）
+   ★ 想调「同一排里各项的间距」→ 改 .pbar .prow 的 gap（第二个值＝横向间距）
+   ★ 想调「两排之间的间距」  → 改 .pbar 的 gap */
+.pstats { display: flex; flex-direction: column; overflow: auto; }
+
+.pbar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 9px;
+  border-top: 0;
+  background: transparent;
+  color: var(--paper-dim);
+  font-size: 9px;
+}
+.pstats .pbar + .pbar { border-top: 1px solid var(--line); }
+
+.prow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 1px 9px;                     /* ← 第二值是同一排内的横向间距 */
+}
+
+.prow.r1 { font-size: 9.5px; }
+.prow.r1 .tot { margin-left: auto; color: #e8dcc0; }
+.prow.r1 .tot b { color: #ffd76a; font-size: 11.5px; }
+.prow.r4 .lan { white-space: normal; line-height: 1.35; opacity: .92; }
+
+.pbar .pn { font-weight: 600; letter-spacing: .06em; }
+.pbar .fan { color: #d98b7a; }       /* 红扇 */
+.pbar .gold { color: var(--gold); }  /* 金扇 */
+.pbar i { font-style: normal; }
+
+/* 资源小标签：底色/描边由 ui.js 按资源色写内联 style */
+.pbar i.rchip {
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font-weight: 600;
+}
+.resl i { margin-right: 4px; }
+
+
+/* ═══ 12 记录日志 ══════════════════════════════════════════════════════
+   日志文字按 pushLog 的 cls 上色：info / pay / act / warn / round */
+.log-wrap {
+  display: flex;
+  flex-direction: column;
+  max-height: 420px;
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(12, 10, 9, 0.55);
+  overflow: hidden;
+}
+.log-wrap h3 {
+  margin: 0;
+  padding: 8px 11px 7px;
+  border-bottom: 1px solid var(--line);
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+}
+.log-wrap h3 span { margin-left: 5px; font-size: 8px; letter-spacing: 0.2em; opacity: 0.45; }
+
+/* 右侧栏里的记录框占满剩余高度 */
+.side .log-wrap { margin-top: 0; max-height: calc(100vh - 90px); }
+.side .stats-wrap + .log-wrap { margin-top: 10px; }
+.stats-wrap { max-height: none; }
+
+.log {
+  overflow-y: auto;
+  padding: 5px 0 8px;
+  font-size: 9.5px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 164, 95, 0.3) transparent;
+}
+.side .log { max-height: calc(100vh - 140px); font-size: 9.5px; }
+.log::-webkit-scrollbar { width: 5px; }
+.log::-webkit-scrollbar-thumb { background: rgba(201, 164, 95, 0.25); border-radius: 3px; }
+
+.log > div {
+  padding: 3px 11px;
+  border-left: 2px solid transparent;   /* ★ 玩家日志：js/ui.js renderLog 会把它覆盖成该玩家的颜色 */
+  line-height: 1.5;
+  color: var(--paper-dim);
+  opacity: 0.85;
+}
+.log > .pay { color: #d8a196; }     /* 支付 */
+.log > .act { color: #e5c489; }     /* 行动 */
+.log > .warn { color: #dfa072; }    /* 警告 / 付不起 */
+.log > .round {
+  color: var(--gold);
+  border-left-color: var(--gold);
+  background: rgba(201, 164, 95, 0.06);
+  letter-spacing: 0.06em;
+}
+
+
+/* ═══ 13 弹窗 / 设置页 ═════════════════════════════════════════════════ */
+.modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(5, 4, 3, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: min(600px, 100%);
+  max-height: 88vh;
+  overflow: hidden;
+  border: 1px solid var(--gold-soft);
+  border-radius: 5px;
+  background: linear-gradient(160deg, rgba(38, 31, 25, 0.98), rgba(15, 12, 11, 0.99));
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
+  animation: modalIn 0.22s ease-out;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 弹窗标题条（规则 / 原版棋盘 / 选择项共用） */
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.panel-head h3 {
+  margin: 0;
+  color: var(--gold);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.20em;
+}
+.panel-head h3 small {
+  margin-left: 6px;
+  color: var(--paper-dim);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  opacity: 0.5;
+}
+
+/* ★ 家纹兑换条：放在选择弹窗底部，随时可用（行动结算到一半也能换） */
+.modal-ex {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--line);
+}
+.modal-ex .ex-lab { font-size: 10px; letter-spacing: .12em; color: var(--paper-dim); opacity: .75; }
+.modal-ex button.ex { padding: 4px 9px; font-size: 10px; }
+
+/* ── 设置页 ── */
+.setup {
+  min-height: calc(100vh - 120px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background:
+    linear-gradient(rgba(8, 7, 6, 0.80), rgba(10, 8, 7, 0.93)),
+    url("../assets/board-base-web.jpg") center / cover no-repeat;
+}
+
+.setup-card {
+  position: relative;
+  width: min(460px, 100%);
+  padding: 38px 36px 30px;
+  border: 1px solid var(--gold-soft);
+  border-radius: 5px;
+  text-align: center;
+  background: linear-gradient(160deg, rgba(40, 32, 26, 0.97), rgba(14, 11, 10, 0.99));
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), inset 0 0 60px rgba(201, 164, 95, 0.03);
+}
+.setup-card::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(201, 164, 95, 0.1);
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.seal {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 16px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 220, 180, 0.35);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #c14a3a, #701f18);
+  color: #f8e9d0;
+  font-size: 26px;
+  box-shadow: 0 0 0 6px rgba(178, 58, 46, 0.1), inset 0 0 18px rgba(0, 0, 0, 0.55);
+}
+
+.setup-card h2 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 0.26em; }
+.setup-sub { margin: 7px 0 26px; color: var(--paper-dim); font-size: 9px; letter-spacing: 0.24em; opacity: 0.6; }
+
+.setup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 13px;
+  text-align: left;
+}
+.setup-row > label { flex: 0 0 auto; color: var(--paper-dim); font-size: 11px; letter-spacing: 0.14em; }
+
+/* 按钮组（人数 / 家族 / 先后手 / 难度） */
+.seg { display: flex; flex: 1 1 auto; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.seg button { min-width: 66px; padding: 6px 12px; font-size: 11px; letter-spacing: 0.06em; border-radius: 2px; }
+.seg button.on {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, rgba(201, 164, 95, 0.25), rgba(201, 164, 95, 0.12));
+  color: #ffe9bd;
+  box-shadow: 0 0 0 1px currentColor inset;
+}
+/* 家族按钮用家族色描边（--sc 由 ui.js 写入） */
+.setup-row .seg.seats button { margin-left: 0; border-color: var(--sc, var(--line)); font-weight: 700; }
+.setup-row .seg.seats button.on { border-color: var(--sc); background: var(--sc); color: #fff; }
+
+.primary {
+  width: 100%;
+  margin-top: 14px;
+  padding: 13px;
+  border: 1px solid var(--gold);
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgba(201, 164, 95, 0.9), rgba(160, 122, 62, 0.9));
+  color: #241a0c;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.4em;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+.primary:hover { background: linear-gradient(180deg, #e8c98a, #caa862); color: #1e1508; }
+
+.setup-note { margin: 14px 0 0; color: var(--paper-dim); font-size: 9.5px; letter-spacing: 0.06em; opacity: 0.55; }
+
+
+/* ═══ 14 Toast / 悬浮按钮 ══════════════════════════════════════════════
+   Toast：选完地点后底部飘一条「结算效果：…」（引擎写 g.lastFx，ui.js 显示）
+   FAB  ：「查看版图」后右下角那个「继续选择」按钮 */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 34px;
+  z-index: 200;
+  max-width: 80vw;
+  padding: 9px 20px;
+  border: 1px solid var(--gold-soft);
+  border-radius: 999px;
+  background: rgba(26, 20, 16, 0.96);
+  color: #ffe9bd;
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 16px);
+  transition: opacity 0.25s, transform 0.25s;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+.fab {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 9999;
+  padding: 10px 16px;
+  border: 1px solid #6b5a44;
+  border-radius: 6px;
+  background: #3a3129;
+  color: #f0e6d2;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .6);
+}
+
+
+/* ═══ 15 响应式 ════════════════════════════════════════════════════════ */
+@media (max-width: 1240px) {
+  .topbar { flex-wrap: wrap; }
+  .status { order: 3; flex-basis: 100%; }
+}
+
+@media (max-width: 1280px) {
+  .game { grid-template-columns: minmax(0, 1fr) 260px; }
+}
+
+@media (max-width: 980px) {
+  #app { padding: 10px 10px 40px; }
+  .topbar { flex-wrap: wrap; gap: 10px; }
+  .status { order: 3; flex-basis: 100%; }
+  .game { grid-template-columns: 1fr; }
+  .side { position: static; order: 3; }
+  .players { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 620px) {
+  .players { grid-template-columns: 1fr; }
+  .setup-card { padding: 28px 20px 24px; }
+  .brand-text h1 { font-size: 19px; }
+}
+
+/* 每层剩余房间卡（卡背堆） */
+
+
+
+
+
+/* 每层剩余城郊卡（卡背堆，尺寸与城郊卡一致） */
+.outdeck { position:absolute; transform:translate(-50%,-50%); width:var(--card-w, 7.0cqw); height:var(--card-h, 10.5cqw); border-radius:3px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.7); z-index:3; }
+.outdeck img { width:100%; height:100%; object-fit:cover; display:block; }
+.outdeck b { position:absolute; right:3px; bottom:2px; font-size:1.3cqw; color:#ffe9bd; text-shadow:0 0 3px #000,0 0 6px #000; }
+.outdeck.empty { opacity:.35; filter:grayscale(1); }
+
+/* 家臣/人物棋子行：层级要高，避免被城郊卡/牌堆挡住 */
+.bslot.piece-row.clan-row { z-index: 9; }
+.bslot.piece-row { z-index: 8; }

@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "games": {
+    "harmonies": {
+      "order": 1,
+      "tag": "Game 01",
+      "theme": "harmonies",
+      "title": "Harmonies",
+      "subtitle": "自然和弦（含律动扩）",
+      "description": "单页式游戏本体，附带动物卡数据表与扩展资料，全部资源通过相对路径加载。",
+      "dir": "Harmonies",
+      "entry": "Harmonies/index.html",
+      "netEntry": "net/client/play.html?game=harmonies",
+      "phoneEntry": "net/client/phone.html?game=harmonies",
+      "phoneShell": false,
+      "soloLabel": "玩家 vs AI",
+      "soloNote": "单机 · 原版设置页，可选 2/3/4 人 · 已自带窄屏适配",
+      "pvpLabel": "玩家 vs 玩家",
+      "pvpNote": "联机 · 4 位房间号，人齐再开始",
+      "saveKey": "mygames.save.harmonies",
+      "preload": "harmonies",
+      "imageRoot": "Harmonies/Images",
+      "mods": ["pulse", "spirit", "cres", "sanct"],
+      "netDefaults": {
+        "humans": 2,
+        "aiCount": 0,
+        "firstSeat": 0,
+        "side": "A",
+        "mods": { "pulse": true, "spirit": false, "cres": false, "sanct": false }
+      }
+    },
+    "castle": {
+      "order": 2,
+      "tag": "Game 02",
+      "theme": "castle",
+      "title": "The White Castle",
+      "subtitle": "姬路城 + 茶道扩 Matcha",
+      "description": "多文件结构（assets / css / js / test / tools），含棋盘、卡牌与 AI 对局模块。",
+      "dir": "The White Castle",
+      "entry": "The White Castle/index.html",
+      "netEntry": "net/client/play.html?game=castle",
+      "phoneEntry": "net/client/phone.html?game=castle",
+      "phoneShell": true,
+      "soloLabel": "玩家 vs AI",
+      "soloNote": "单机 · 原版设置页，可选 AI 难度",
+      "pvpLabel": "玩家 vs 玩家",
+      "pvpNote": "联机 · 4 位房间号，人齐再开始",
+      "saveKey": "mygames.save.castle",
+      "preload": "castle",
+      "imageRoot": "The White Castle/assets",
+      "mods": [],
+      "netDefaults": {
+        "humans": 2,
+        "aiCount": 0,
+        "firstSeat": 0,
+        "difficulty": "normal",
+        "order": "first"
+      }
+    }
+  },
+  "runtime": {
+    "wbappBase": "https://wbapp-taclc6bwvig7d6rf6gthdt.apps.workbuddy.host",
+    "sharecode": "EMNYQY6XAD"
+  }
+}

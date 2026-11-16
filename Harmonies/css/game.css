@@ -1,0 +1,405 @@
+  :root {
+    --bg:#161a20; --panel:#22262e; --panel2:#1a1e25; --text:#e8e8e8; --muted:#8a919e;
+    --accent:#7fb069; --gold:#d4a853; --red:#c25b4e;
+    --pubCardH:240px; /* 公共区提示卡/市场卡/保护区卡统一高度(随左列加宽按比例提高) */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;
+    background:radial-gradient(900px 320px at 50% -80px, rgba(127,176,105,.10), transparent 70%), var(--bg);
+    background-attachment:fixed;color:var(--text);
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:8px 10px 10px;user-select:none}
+  h1{font-size:1.1rem;font-weight:500;letter-spacing:3px}
+  .subtitle{color:var(--muted);font-size:.72rem;margin:2px 0 6px}
+  .topbar{display:flex;gap:14px;align-items:center;margin-bottom:8px;font-size:.8rem;color:var(--muted);flex-wrap:wrap;justify-content:center}
+  .topbar b{color:var(--gold)}
+  /* 右列用 minmax(0,1fr):防止公共区内容把 grid 列撑破,导致第 3 张保护区卡被挤出视口 */
+  .layout{display:grid;grid-template-columns:360px minmax(0,1fr);gap:12px;width:100%;max-width:1440px}
+  .boards{display:grid;gap:12px;grid-template-columns:repeat(2,1fr)}
+  .boards.n3{grid-template-columns:repeat(3,1fr)}
+  /* 4 人局沿用 2 人局的两列布局,多出的 2 人放到第二行(玩家0/1 上行,2/3 下行) */
+  .boards.n4{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:1050px){
+    .layout{grid-template-columns:1fr}
+    .boards,.boards.n3,.boards.n4{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+  }
+  .col{display:flex;flex-direction:column;gap:10px}
+  .card{background:var(--panel);border-radius:12px;border:1px solid #2c3240;padding:10px}
+  .card h3{font-size:.72rem;color:var(--muted);font-weight:500;margin-bottom:7px;text-transform:uppercase;letter-spacing:1px}
+  .board-card{background:var(--panel);border-radius:12px;border:1px solid #2c3240;padding:8px;display:flex;flex-direction:column;align-items:center}
+  .board-title{font-size:.85rem;margin-bottom:4px}
+  .board-title .pts{color:var(--gold);font-weight:600}
+  .board-title .firstTag{color:var(--gold);font-size:.6rem;border:1px solid var(--gold);
+    border-radius:6px;padding:1px 5px;margin-left:6px;vertical-align:middle}
+  canvas{display:block;border-radius:8px;background:#12151a;max-width:100%;height:auto}
+  canvas.mine{cursor:pointer}
+  /* 供应区(横排在版图上方) */
+  .public-row{display:flex;gap:12px;align-items:stretch}
+  .public-row .card{margin:0;display:flex;flex-direction:column}
+  .public-row .card h3{flex:none}
+  #supply{display:flex;flex-direction:column;gap:6px}
+  /* 市场卡与提示卡放大:填满供应堆高度 */
+  #market{flex:1;min-height:0;flex-wrap:nowrap}
+  #market .acard{flex:1 1 0;min-width:0;display:flex;flex-direction:column}
+  #market .acard .aimg{height:0;flex-grow:1;min-height:0;object-fit:cover}
+  #gameAid{flex:1;min-height:0}
+  #gameAid .acard{width:150px;height:250px;display:flex;flex-direction:column}
+  #gameAid .acard .aimg{height:0;flex-grow:1;min-height:0;object-fit:contain;background:#0d0f13}
+  /* 卡面预览(悬停临时显示/点选常驻):位于结束回合按钮下方,宽度顶格,高度按卡面比例自然向下撑开 */
+  #cardPreview{display:flex;justify-content:center;align-items:center;min-height:150px;overflow:visible}
+  #cardPreview img{width:100%;height:auto;object-fit:contain;border-radius:8px;display:block}
+  #cardPreview .pv-ph{width:100%;min-height:170px;border:1px dashed #3a414d;border-radius:8px}
+  .pv-ph{color:var(--muted);font-size:.72rem;text-align:center;line-height:1.6;padding:8px;
+    display:flex;align-items:center;justify-content:center}
+  .supply-group{display:flex;gap:5px;padding:5px;border-radius:8px;background:var(--panel2);margin-bottom:0;cursor:pointer;transition:outline .1s;align-items:center;min-height:48px}
+  .supply-group:hover{outline:2px solid var(--accent)}
+  .supply-group.empty{opacity:.25;pointer-events:none;justify-content:center}
+  .tok{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:.68rem;font-weight:600;color:transparent;border:2px solid transparent;flex:none;
+    background-size:cover;background-position:center;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+  .tok.water{background-color:#4a7fb5}.tok.mountain{background-color:#8a8f98}
+  .tok.trunk{background-color:#7a5a3a}.tok.tree{background-color:#4f8a3f}
+  .tok.field{background-color:#d4b84a}.tok.building{background-color:#b5544a}
+  .tok.water{background-image:url('Images/res/water.png')}
+  .tok.mountain{background-image:url('Images/res/mountain.png')}
+  .tok.trunk{background-image:url('Images/res/trunk.png')}
+  .tok.tree{background-image:url('Images/res/tree.png')}
+  .tok.field{background-image:url('Images/res/field.png')}
+  .tok.building{background-image:url('Images/res/building.png')}
+  /* 手牌 */
+  .hand{display:flex;gap:8px;min-height:48px;align-items:center;justify-content:center}
+  .hand .tok{width:44px;height:44px;cursor:pointer;font-size:.75rem;transition:transform .1s,box-shadow .1s}
+  .hand .tok:hover:not(.placed){transform:translateY(-2px)}
+  .hand .tok.selected{border-color:#fff;box-shadow:0 6px 14px rgba(0,0,0,.45),0 0 10px rgba(255,255,255,.5);transform:translateY(-4px)}
+  .hand .tok.placed{opacity:.18;pointer-events:none}
+  /* 动物卡 */
+  .card-row{display:flex;gap:6px;flex-wrap:wrap}
+  .acard{width:86px;background:var(--panel2);border-radius:8px;padding:6px 5px;font-size:.68rem;
+    border:1px solid #333a44;cursor:pointer;transition:transform .1s,border-color .1s;position:relative}
+  .acard:hover{transform:translateY(-2px);border-color:var(--accent)}
+  .acard .nm{font-weight:600;font-size:.75rem;text-align:center}
+  .acard .ic{text-align:center;font-size:1.05rem;line-height:1.2}
+  .acard .aimg{width:100%;display:block;border-radius:5px;margin-bottom:3px}
+  .acard .cubes{display:flex;gap:3px;justify-content:center;margin-top:3px}
+  .cubeslot{width:16px;height:16px;border-radius:3px;background:var(--gold);color:#221;display:flex;align-items:center;
+    justify-content:center;font-size:.6rem;font-weight:600;border:1px solid #b8934a}
+  .cubeslot.filled{background:#10131a;color:var(--muted);border-color:#2a303a}
+  /* 精灵牌分数方格:尺寸与动物牌 .cubeslot 完全一致,仅换成淡紫色 */
+  .cubeslot.elf-slot{background:#c9a8ef;color:#3a2352;border-color:#9d7ad0}
+  .acard .pat{color:var(--muted);font-size:.58rem;margin-top:3px;text-align:center;line-height:1.3}
+  .acard.done{opacity:.45;border-color:var(--accent)}
+  .acard.cubemode{border-color:#fff;box-shadow:0 0 10px rgba(255,255,255,.5)}
+  .acard.spirit{border-color:#7a5adf}
+  .acard.elf{border-color:#e0c060}
+  /* Pulse 10 张卡:蓝色描边 + 「可镜像对称放置」标识(仿精灵牌角标) */
+  .acard.pulse{border-color:#5aa9d6}
+  .acard .badge.pulse-badge{background:#2f6f96;color:#eaf6ff;border:1px solid #7fc4e8}
+  .acard.facedown{opacity:.85;cursor:default}
+  .board-card .card .acard{width:120px;flex:none}
+  .board-card .card .acard .aimg{height:auto;max-height:160px;object-fit:contain}
+  .board-card .card .card-row{justify-content:center}
+  #sanctOffer{flex:1;min-height:0}
+  #sanctOffer .acard{width:130px;flex:none;display:flex;flex-direction:column}
+  /* 图片区 flex 填满整卡高度:用 contain 完整显示整张板块卡(不裁切),深色底吸收少量留白,
+     底部再补 4 层地形链,让 240px 卡片被内容填满、与旁边市场卡视觉等高 */
+  #sanctOffer .acard .aimg{height:0;flex:1 1 auto;min-height:0;object-fit:contain;width:100%;
+    margin-bottom:2px;background:#0d0f13}
+  /* ===== 公共区:右列一排(市场动物卡 → 保护区板块);左列顶部(提示卡 | 供应区) ===== */
+  .public-area{display:flex;flex-direction:column;align-items:stretch;gap:8px;width:100%}
+  .public-area > .card, .public-row > .card, .side-row > .card{padding:7px;border-radius:9px}
+  .public-area h3, .side-row h3{font-size:.62rem;margin-bottom:5px;letter-spacing:.3px;line-height:1.3;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .public-row{gap:8px;align-items:stretch;width:100%;min-width:0}
+  .public-row > .card, .side-row > .card{flex:0 0 auto;min-width:0;display:flex;flex-direction:column}
+  /* 按 5 张市场卡 : 3 张保护区卡 = 5:3 分配整行宽度,任何窗口下两类单卡宽度都接近;
+     flex-basis:0 + min-width:0 保证不会被内容宽度撑破 grid 列 */
+  .public-row .pub-market{flex:5 1 0;min-width:0;width:auto}
+  .public-row .pub-sanct{flex:3 1 0;min-width:0;width:auto}
+  /* 左列顶部:提示卡与供应区并列;整体与右列公共区等高 */
+  .side-row{display:flex;gap:8px;align-items:stretch;width:100%}
+  .side-row > .card{flex:1 1 0;width:auto}
+  /* 市场动物卡:与玩家面板 cardHtml 完全同一套结构(图 → 名称 → 分数方格 → 图案) */
+  #market{display:flex;gap:6px;flex-wrap:nowrap;justify-content:center}
+  #market .acard, #market .market-card{flex:0 1 144px;width:144px;height:var(--pubCardH);min-width:0;min-height:0;
+    display:flex;flex-direction:column;overflow:hidden;border-radius:6px;background:var(--panel);
+    transition:transform .12s,border-color .12s}
+  #market .market-card.takeable{cursor:pointer}
+  #market .market-card.takeable:hover{transform:translateY(-3px);border-color:var(--gold)}
+  #market .market-card .aimg{width:100%;height:0;flex:1 1 auto;min-height:0;object-fit:contain;
+    display:block;margin-bottom:2px;background:#0d0f13}
+  #market .market-card .nm{font-size:.62rem;line-height:1.2;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #market .market-card .cubes{margin-top:2px;gap:2px;flex-wrap:nowrap;justify-content:center}
+  #market .market-card .cubeslot{width:15px;height:15px;min-width:15px;padding:0;font-size:.52rem}
+  #market .market-card .pat{font-size:.5rem;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 市场卡标签走底部静态行(.badge.card-tag),不再绝对定位到右上角 */
+  #market .market-card .badge.card-tag{font-size:.45rem;padding:1px 3px;margin-top:2px}
+  #market .market-card.facedown .aimg{width:100%;height:100%;flex:none}
+  #gameAid .acard{width:100%;height:var(--pubCardH)}
+  #sanctOffer .acard{height:var(--pubCardH)}
+  #gameAid, #sanctOffer{flex:1;min-height:0}
+  /* 保护区 3 张板块固定一行:原先 3×91+2×6=285px 比可用 284px 多 1px,会换行并把整排撑高 */
+  #sanctOffer{flex-wrap:nowrap;gap:4px}
+  #sanctOffer .acard{width:auto;flex:1 1 0;min-width:0;overflow:hidden}
+  /* 与市场卡同构:底部名称 + 4 层地形链,整卡高度由 --pubCardH 统一;徽章不再压在卡面上 */
+  #sanctOffer .acard .nm{font-size:.58rem;line-height:1.2;margin:0;flex:none;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #sanctOffer .acard .layers{display:flex;gap:2px;justify-content:center;align-items:center;
+    flex:none;margin-top:3px}
+  #sanctOffer .acard .layers i{width:12px;height:12px;border-radius:3px;display:block;
+    border:1px solid rgba(0,0,0,.35)}
+  #sanctOffer .acard .badge{position:static;align-self:center;font-size:.45rem;padding:1px 3px;margin-top:3px}
+  #supply{flex:1;min-height:0;gap:4px;justify-content:space-between}
+  #supply .supply-group{flex:1;min-height:0;gap:4px;padding:2px 3px;border-radius:6px;justify-content:center}
+  #supply .tok{width:30px;height:30px}
+  /* 玩家面板卡牌:按人数比例缩减,保证 4 张能排成一行
+     注:zoom 元素的布局宽度 = 父容器宽 / zoom;4 张 120px 卡 + 3 个 6px 间距 = 498px,
+     因此各档 zoom 需 <= 父宽/498。左列由 300px 加宽到 360px 后右列变窄,
+     各档 zoom 同步下调并留约 8% 余量,避免窗口稍窄就换行。 */
+  .board-card .card .card-row{zoom:.75;flex-wrap:nowrap}
+  .boards.n3 .board-card .card .card-row{zoom:.46}
+  /* 已完成卡牌区:数量会随游戏增长,允许换行并保持可读性 */
+  .board-card .card .card-row.done-row{flex-wrap:wrap;justify-content:center;row-gap:6px}
+  .board-card .card .card-row.done-row .acard.done{opacity:.8}
+  /* 4 人局为两列,列宽与 2 人局一致,直接沿用 .75 缩放 */
+  .acard.takeable:hover{border-color:var(--gold)}
+  .badge{position:absolute;top:-6px;right:-4px;background:var(--accent);color:#111;border-radius:8px;
+    font-size:.55rem;padding:1px 5px;font-weight:700}
+  /* 卡牌自身的标签(精灵 / 自然之灵 / Pulse):从右上角移到卡片底部一行,不再压住卡面 */
+  .acard .badge.card-tag{position:static;display:block;width:fit-content;max-width:100%;
+    margin:3px auto 0;padding:1px 4px;border-radius:5px;font-size:.48rem;font-weight:600;
+    line-height:1.35;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 按钮 */
+  .btn{background:linear-gradient(180deg,#8cba76,#6f9e5b);color:#111;border:none;border-radius:10px;padding:9px 12px;
+    font-size:.85rem;font-weight:600;cursor:pointer;width:100%;
+    transition:filter .12s,transform .08s,box-shadow .12s;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+  .btn:hover:not(:disabled){filter:brightness(1.08)}
+  .btn:active:not(:disabled){transform:translateY(1px);filter:brightness(.95)}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+  .btn.secondary{background:transparent;border:1px solid #3a4152;color:var(--text);box-shadow:none}
+  .btn.secondary:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+  .btn.warn{background:linear-gradient(180deg,#e0b663,#c99a42)}
+  .row2{display:flex;gap:8px}.row2 .btn{flex:1}
+  .msg{font-size:.8rem;color:var(--gold);min-height:1.2em;text-align:center;margin-top:6px}
+  .log{font-size:.68rem;color:var(--muted);height:260px;overflow-y:auto;line-height:1.5}
+  .log b{color:var(--text)}
+  .log .pl0{color:#e05a4e}
+  .log .pl1{color:#d9a93f}
+  .log .pl2{color:#4a8fd9}
+  .log .pl3{color:#58b45c}
+  /* 设置与结算遮罩 */
+  .overlay{position:fixed;inset:0;background:rgba(10,12,16,.92);display:flex;align-items:center;
+    justify-content:center;z-index:100;padding:16px}
+  .modal{background:var(--panel);border-radius:14px;padding:24px;max-width:560px;width:100%;max-height:92vh;overflow-y:auto}
+  .modal h2{font-size:1.1rem;margin-bottom:4px;letter-spacing:2px}
+  .modal .sub{color:var(--muted);font-size:.75rem;margin-bottom:16px}
+  .opt-group{margin-bottom:14px}
+  .opt-group>label{font-size:.78rem;color:var(--muted);display:block;margin-bottom:6px}
+  .opt-row{display:flex;gap:8px;flex-wrap:wrap}
+  .opt{padding:7px 13px;border-radius:8px;border:1px solid var(--muted);background:transparent;
+    color:var(--text);cursor:pointer;font-size:.8rem}
+  .opt.on{background:var(--accent);color:#111;border-color:var(--accent);font-weight:600}
+  .opt .tag{font-size:.6rem;color:var(--gold);display:block}
+  .opt.on .tag{color:#321}
+  .check-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:.82rem;cursor:pointer}
+  .check-row input{accent-color:var(--accent);width:16px;height:16px}
+  .note{font-size:.68rem;color:var(--muted);line-height:1.5;margin-top:10px}
+  /* 开局设置:左提示卡 + 右选项 两栏布局 */
+  #setupOv .modal{max-width:780px}
+  .setup-cols{display:flex;gap:22px;align-items:flex-start}
+  .setup-aid{flex:none;width:170px}
+  .setup-aid .aid-label{font-size:.78rem;color:var(--muted);display:block;margin-bottom:2px}
+  .setup-aid .aid-sub{font-size:.62rem;color:var(--muted);opacity:.85;margin-bottom:8px}
+  #aidPreview .acard{width:150px;flex:none}
+  #aidPreview .acard .aimg{width:100%;object-fit:contain;background:#0d0f13;border-radius:5px}
+  .setup-opts{flex:1;min-width:0}
+  @media(max-width:700px){
+    .setup-cols{flex-direction:column}
+    .setup-aid{width:100%}
+  }
+  table.score{width:100%;border-collapse:collapse;font-size:.8rem;margin:10px 0}
+  table.score td,table.score th{padding:5px 8px;border-bottom:1px solid #333a44;text-align:right}
+  table.score td:first-child,table.score th:first-child{text-align:left;color:var(--muted)}
+  table.score tr.total td{font-weight:700;color:var(--gold);font-size:.95rem;border-top:2px solid var(--gold)}
+  .winner{text-align:center;font-size:1.1rem;color:var(--gold);margin:8px 0;font-weight:600}
+  .spirit-pick{display:flex;gap:10px}
+  .spirit-pick .acard{width:45%;cursor:pointer}
+  .hidden{display:none!important}
+  .ai-thinking{font-size:.72rem;color:var(--accent);text-align:center;min-height:1em}
+  /* 袋中标记按颜色显示 */
+  .pouch-dot{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:middle;margin:0 3px 0 7px;
+    box-shadow:0 0 0 1px rgba(255,255,255,.25)}
+  /* 悬停放大动物卡 */
+  #cardZoom{position:fixed;z-index:300;pointer-events:none;display:none;width:320px;border-radius:12px;
+    overflow:hidden;box-shadow:0 10px 34px rgba(0,0,0,.75);border:1px solid #4a525e;background:#111}
+  #cardZoom img{width:100%;display:block}
+  .acard.aid{cursor:default}
+  /* 整体缩放控制(右上角) */
+  #zoomCtl{position:fixed;right:14px;top:10px;z-index:95;display:flex;gap:5px;align-items:center;
+    background:var(--panel);border:1px solid #2c3240;border-radius:10px;padding:4px 7px}
+  #zoomCtl button{width:26px;height:24px;border-radius:6px;border:1px solid #3a4152;background:transparent;
+    color:var(--text);cursor:pointer;font-size:.9rem;line-height:1;padding:0}
+  #zoomCtl button:hover{border-color:var(--accent);color:var(--accent)}
+  #zoomVal{font-size:.72rem;color:var(--muted);min-width:38px;text-align:center}  .aid-ph{height:120px;display:flex;align-items:center;justify-content:center;color:var(--muted);
+    font-size:.7rem;border:1px dashed #3a414d;border-radius:6px;text-align:center;line-height:1.5}
+  .done-cap{font-size:.62rem;color:var(--muted);margin-top:3px}
+
+  /* ==========================================================================
+     响应式层 —— 按视口宽度分档，任何宽度下 scrollWidth === clientWidth
+     （只需纵向滚动，不需要左右滑动）
+
+     四条原则：
+       ① grid 列一律 minmax(0,1fr)，消灭 1fr 的隐式 min-content 下限；
+       ② flex 子项补 min-width:0，允许被压扁；nowrap 一律改 wrap；
+       ③ 「一行固定 N 张」的区域改 flex-wrap + flex-basis 最小宽度，
+          列数随可用宽度自适应，图片按自然比例撑高（不再写死高度导致大面积留白）；
+       ④ 窄屏把嵌套列 display:contents 拍平，再用 order 重排阅读顺序。
+
+     档位：≥1050 桌面原样 / 900–1049 两列收窄 / ≤899 单列 / ≤620 紧凑 / ≤420 最紧凑
+     ========================================================================== */
+
+  /* ---------- 档 1：900–1049px —— 两列，侧栏收窄 ---------- */
+  @media (max-width:1049px){
+    .layout{grid-template-columns:288px minmax(0,1fr);gap:10px}
+    .boards,.boards.n3,.boards.n4{grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+
+    /* 公共区：市场在上、保护区在下（原 5:3 并排会让两者都只剩一格宽） */
+    .public-row{flex-direction:column}
+    .public-row .pub-market,.public-row .pub-sanct{flex:none;width:100%;min-width:0}
+    /* 市场 / 保护区：原 nowrap + 固定 144/130px 卡是横向溢出主因，改 wrap + 弹性基准 */
+    #market,#sanctOffer{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;
+      flex:none;height:auto;min-height:0;align-items:stretch}
+    /* max-width 收在 126px：390px 屏 3 张一行时每张 117px，剩下的 2 张被 cap 在 126px，
+       两行尺寸差 <8%（原来 140px 会差到 20%，第二行明显更大） */
+    #market .acard,#market .market-card,#sanctOffer .acard{
+      width:auto;flex:1 1 96px;max-width:126px;min-width:0;height:auto;overflow:hidden}
+    /* 图片按自然比例撑高：卡宽变化时自动等比缩放，不留横向暗边 */
+    #market .acard .aimg,#market .market-card .aimg,#sanctOffer .acard .aimg{
+      width:100%;height:auto;flex:none;object-fit:contain}
+
+    /* 版图卡牌行：zoom 元素的布局宽度 = 父宽 / zoom，窄屏会顶破；改 wrap 彻底免疫。
+       .board-card 默认 align-items:center 会把内层 .card 收成 max-content 宽，
+       导致卡牌行只剩两百来像素、每张卡被撑到半屏——这里改成 stretch。 */
+    .board-card{align-items:stretch}
+    .board-card>.card{width:100%;min-width:0}
+    .board-card .card .card-row,
+    .boards.n3 .board-card .card .card-row{zoom:1;flex-wrap:wrap;justify-content:center;gap:6px}
+    .board-card .card .acard{width:auto;flex:1 1 84px;max-width:132px;min-width:0}
+    /* 画布按列宽等比缩放，但别放大到 1.4 倍以上（否则版图区高得离谱、像素也发虚） */
+    .board-card canvas{max-width:min(100%,600px);margin:0 auto}
+
+    /* 侧栏顶部：提示卡 | 供应区 */
+    #gameAid{display:flex;flex-wrap:wrap;gap:6px;flex:none;height:auto;justify-content:center}
+    #gameAid .acard{width:auto;flex:0 1 auto;height:auto;max-width:130px}
+    #gameAid .acard .aimg{width:100%;height:auto;flex:none}
+    #supply{justify-content:flex-start}
+    #supply .tok{width:26px;height:26px}
+    #supply .supply-group{flex-wrap:wrap;justify-content:center}
+
+    /* 卡面预览：原 width:100% 在宽屏会撑成上千像素高的巨图 */
+    #cardPreview img{width:auto;max-width:100%;max-height:44vh;height:auto}
+    .log{height:200px}
+    #cardZoom{max-width:calc(100vw - 20px)}
+  }
+
+  /* ---------- 档 2：≤899px —— 单列（拍平 + 重排） ---------- */
+  @media (max-width:899px){
+    body{padding:6px 8px 14px;min-height:0}
+    h1{font-size:1rem;letter-spacing:2px}
+    .subtitle{font-size:.68rem;margin:0 0 6px;padding:0 4px;text-align:center}
+    .topbar{gap:8px 12px;font-size:.72rem;margin-bottom:8px}
+    /* 单列：grid → flex。这里允许换行，因为第二行要放「1/5 + 1/5 + 3/5」三块并排；
+       JS 会往 #layout 写 inline maxWidth，这里一并压掉 */
+    .layout{display:flex;flex-wrap:wrap;gap:8px;max-width:none!important;--tz:1}
+    /* 拍平嵌套列，让所有区块成为同一条流里的兄弟项 */
+    .layout>.col,.public-area,.public-row,.boards,.side-row{display:contents}
+    /* 注意：拍平只改变布局归属，DOM 上这些区块仍嵌在 .col / .public-row / .side-row 里，
+       所以 `.layout>*` 选不中它们，必须逐个给宽度（用 `.父>.子` 压过原有规则）。 */
+    .side-col>.hand-card,.side-col>#msg,.side-col>.row2,.side-col>#btnEnd,.side-col>.log-card,
+    .boards>.col,#previewCard{width:100%;min-width:0}
+
+    /* ── 顶部两行：都按 5 等分与市场卡对齐 ──────────────────────────
+       第一行 = 动物市场卡 5 张一排（nowrap + 等分）
+       第二行 = 提示卡(1/5) + 供应堆(1/5) + 保护区(3/5)
+       两行内部统一用 zoom:var(--tz) 等比缩小 —— 卡片宽度由容器决定，
+       zoom 让卡面里的名称 / 分数方格 / 图案说明按同一比例变小，不靠逐条改字号。 */
+    .public-row>.pub-market{order:1;flex:none;width:100%;min-width:0}
+    #market{display:flex;flex-wrap:nowrap;justify-content:stretch;gap:6px;
+      flex:none;height:auto;zoom:var(--tz,1)}
+    #market .acard,#market .market-card{width:auto;flex:1 1 0;min-width:0;max-width:none;height:auto}
+    /* 第二行：行内 gap 8px × 2 段 = 16px，5 等分后每份 (100% - 16px)/5 */
+    .side-row>.pub-aid{order:2;flex:none;width:calc((100% - 16px)/5);min-width:0}
+    .side-row>.pub-supply{order:3;flex:none;width:calc((100% - 16px)/5);min-width:0}
+    .public-row>.pub-sanct{order:4;flex:none;width:calc((100% - 16px)*3/5);min-width:0}
+    #sanctOffer{display:flex;flex-wrap:nowrap;gap:4px;flex:none;height:auto;zoom:var(--tz,1)}
+    #sanctOffer .acard{width:auto;flex:1 1 0;min-width:0;max-width:none;height:auto}
+    #gameAid,#supply{zoom:var(--tz,1);flex:none;height:auto}
+    #gameAid .acard{flex:1 1 auto;max-width:none;height:auto}
+    #supply .tok{width:24px;height:24px}
+
+    /* 其余顺序不变：手牌 → 提示行 → 撤回 → 结束回合 → 我的版图 → 对手版图 → 预览 → 日志 */
+    .side-col>.hand-card{order:5}
+    .side-col>#msg{order:6}
+    .side-col>.row2{order:7}
+    .side-col>#btnEnd{order:8}
+    .boards>.col{order:10}
+    .boards>.col:first-child{order:9}
+    #previewCard{order:11}
+    .side-col>.log-card{order:12}
+
+    .board-card{width:100%;min-width:0}
+    .board-title{font-size:.78rem;line-height:1.6;text-align:center}
+    #cardPreview{min-height:110px}
+    #cardPreview img{max-height:38vh}
+    .btn{padding:12px 10px;min-height:44px;font-size:.88rem}
+    .opt{min-height:38px}
+    .log{height:150px}
+
+    /* 弹窗：占满可视高度，选项区自己滚，开始按钮常驻底部 */
+    .overlay{align-items:flex-start;padding:10px}
+    .modal{max-height:calc(100dvh - 20px);padding:16px 14px}
+    #setupOv .modal{display:flex;flex-direction:column;max-height:calc(100dvh - 20px)}
+    #setupOv .setup-cols{flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:2px}
+
+    /* 顶部缩放条会压住 topbar；窄屏放大到 >100% 会直接制造横向溢出，
+       所以这里只隐藏控件，真正的上限由 applyZoom() 按视口宽度钳制（不写 !important，
+       联机页顶栏的 A− / A+ 仍可直接调 body.zoom） */
+    #zoomCtl{display:none}
+  }
+
+  /* ---------- 档 3：≤620px —— 紧凑 ---------- */
+  @media (max-width:620px){
+    .layout{gap:8px;--tz:.8}
+    .card{padding:8px}
+    .card h3{font-size:.66rem}
+    #market,#sanctOffer{gap:5px}
+    .board-card .card .card-row,
+    .boards.n3 .board-card .card .card-row{gap:5px}
+    .board-card .card .acard{flex-basis:76px}
+    .log{height:130px}
+    .setup-aid{width:100%}
+    #aidPreview .acard{width:132px}
+  }
+
+  /* 顶部两行的等比缩小档位：市场卡宽 ≈ (视口 - 54) / 5，除以桌面卡宽 144 就是比例。
+     480→85px(.6)、420→73px(.5)、360→61px(.42)。 */
+  @media (max-width:480px){ .layout{--tz:.6} }
+
+  /* ---------- 档 4：≤420px —— 最紧凑 ---------- */
+  @media (max-width:420px){
+    .layout{--tz:.5}
+    body{padding:4px 6px 12px}
+    .hand{gap:6px}
+    .hand .tok{width:40px;height:40px}
+    .row2{flex-direction:column}
+    .row2 .btn{width:100%}
+    .opt{padding:7px 9px;font-size:.76rem}
+    .check-row{font-size:.78rem;align-items:flex-start}
+    .check-row input{margin-top:2px}
+    #cardZoom{width:calc(100vw - 20px)}
+    .modal{padding:14px 12px}
+  }
+
+  /* ---------- 档 5：≤360px —— 顶部两行再收一档 ---------- */
+  @media (max-width:360px){
+    .layout{--tz:.42}
+    #supply .tok{width:22px;height:22px}
+  }

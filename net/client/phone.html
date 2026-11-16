@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>单机 · 手机适配</title>
+<link rel="stylesheet" href="solo-phone.css">
+</head>
+<body>
+<div id="bar">
+  <button id="btnBack">返回</button>
+  <span id="ttl">游戏</span>
+  <span id="ratio"></span>
+  <span class="sp"></span>
+  <button id="btnMode">原尺寸</button>
+</div>
+<div id="wrap"><div id="pan"><iframe id="frame" scrolling="no" title="游戏画面"></iframe></div></div>
+<div id="premask"><div class="box">
+  <div class="t">正在载入游戏资源</div>
+  <div class="s">首次进入需要下载卡图与版图，之后会走缓存</div>
+  <div class="track"><div class="fill"></div></div>
+  <div class="n">0 / 0 · 0%</div>
+</div></div>
+<script src="mobile-shell.js"></script>
+<script src="games.js"></script>
+<script src="solo-phone.js"></script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的游戏 · 选择对战模式</title>
+<style>
+  :root {
+    --bg: #0e1218;
+    --panel: #171e28;
+    --panel-hover: #1d2733;
+    --line: #2a3543;
+    --text: #e8edf4;
+    --muted: #8d9bad;
+    --green: #7fc8a0;
+    --gold: #d9b26a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(1200px 600px at 50% -10%, #1b2634 0%, var(--bg) 70%);
+    color: var(--text);
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 56px 24px 70px;
+  }
+  header { text-align: center; margin-bottom: 38px; }
+  h1 { margin: 0 0 10px; font-size: 30px; font-weight: 600; letter-spacing: 1px; }
+  header p { margin: 0; color: var(--muted); font-size: 14px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 360px));
+    gap: 24px;
+    width: 100%;
+    max-width: 800px;
+  }
+  .card {
+    display: block;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 26px 24px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 4px;
+  }
+  .card.harmonies::before { background: linear-gradient(90deg, var(--green), #4a8f8a); }
+  .card.castle::before    { background: linear-gradient(90deg, #f2ece1, var(--gold)); }
+  .tag { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  h2 { margin: 14px 0 6px; font-size: 22px; font-weight: 600; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+  .desc { font-size: 12px; line-height: 1.8; color: #b9c4d2; margin: 0 0 18px; min-height: 44px; }
+  .mode-label { font-size: 11px; letter-spacing: 1px; color: var(--muted); margin: 0 0 9px; }
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  a.mode {
+    display: block; border-radius: 10px; padding: 12px 13px;
+    text-decoration: none; border: 1px solid var(--line);
+    background: #121a24; transition: background .18s ease, border-color .18s ease, transform .18s ease;
+  }
+  a.mode:hover { transform: translateY(-2px); }
+  a.mode b { display: block; font-size: 13px; color: var(--text); margin-bottom: 5px; }
+  a.mode span { display: block; font-size: 11px; color: var(--muted); line-height: 1.6; }
+  a.mode.solo:hover { border-color: #4a5a6d; background: #1b2531; }
+  a.mode.pvp { border-color: #2f5c4a; background: #152921; }
+  a.mode.pvp b { color: var(--green); }
+  a.mode.pvp:hover { border-color: var(--green); background: #1b332a; }
+  .path { margin-top: 16px; font-size: 11px; color: #68768a; font-family: Consolas, Monaco, monospace; word-break: break-all; }
+  footer { margin-top: 40px; color: #8d9bad; font-size: 12px; text-align: center; line-height: 2; max-width: 760px; }
+  code { background: #1e2835; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+  .rule { margin-top: 16px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 10px;
+          background: #141c26; font-size: 12px; line-height: 2; color: #a9b6c6; text-align: left; max-width: 760px; }
+  .rule b { color: var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>我的游戏</h1>
+  <p>先选对战模式，再选游戏 —— 玩家 vs AI，还是玩家 vs 玩家</p>
+</header>
+
+<div class="grid" id="gameGrid">
+  <div class="card harmonies">
+    <div class="tag">Game 01</div>
+    <h2>Harmonies</h2>
+    <p class="sub">自然和弦（含律动扩）</p>
+    <p class="desc">单页式游戏本体，附带动物卡数据表与扩展资料，全部资源通过相对路径加载。</p>
+    <p class="mode-label">选择对战模式</p>
+    <div class="modes">
+      <a class="mode solo" href="./Harmonies/index.html">
+        <b>玩家 vs AI</b><span>单机 · 原版设置页，可选 2/3/4 人 · 已自带窄屏适配</span>
+      </a>
+      <a class="mode pvp" href="./net/client/play.html?game=harmonies">
+        <b>玩家 vs 玩家</b><span>联机 · 4 位房间号，人齐再开始</span>
+      </a>
+    </div>
+    <div class="path">./Harmonies/index.html</div>
+  </div>
+
+  <div class="card castle">
+    <div class="tag">Game 02</div>
+    <h2>The White Castle</h2>
+    <p class="sub">姬路城 + 茶道扩 Matcha</p>
+    <p class="desc">多文件结构（assets / css / js / test / tools），含棋盘、卡牌与 AI 对局模块。</p>
+    <p class="mode-label">选择对战模式</p>
+    <div class="modes">
+      <a class="mode solo" href="./The White Castle/index.html"
+         data-desk="./The White Castle/index.html" data-phone="./net/client/phone.html?game=castle">
+        <b>玩家 vs AI</b><span>单机 · 原版设置页，可选 AI 难度</span>
+      </a>
+      <a class="mode pvp" href="./net/client/play.html?game=castle">
+        <b>玩家 vs 玩家</b><span>联机 · 4 位房间号，人齐再开始</span>
+      </a>
+    </div>
+    <div class="path">./The White Castle/index.html</div>
+  </div>
+</div>
+
+<div class="rule">
+  <b>玩家 vs 玩家（联机）流程</b>：房主创建 <code>4 位数字房间号</code> → 其他玩家输入房间号加入 → <b>房主统一设定开局规则</b> → 真人全部到齐后房主点「开始对局」，所有窗口才同时开局。<b>不会自动开始</b>。<br>
+  <b>游戏外 · 房间设置</b>（只决定怎么连，不写进游戏状态）：游戏、房间号、昵称、联机通道。<br>
+  <b>游戏内 · 开局规则</b>（房主冻结，所有窗口一致）：真人人数 <code>1~4</code>、是否添加 AI 及数量 <code>0~3</code>（总席位 <code>2~4</code>）、先手座位、版图 / 扩展、AI 难度。AI 只由房主窗口代跑，其余窗口为纯镜像；进入对局后原版设置页隐藏，两边不能再各选人数或难度。<br>
+  <b>手机 / 平板</b>：<b>自然和弦</b>两个入口都自带响应式布局（CSS 按 <code>≤1049 / ≤899 / ≤620 / ≤420</code> 四档切换，任何宽度都不需要左右滑动，纵向滚动即可），单机与联机共用同一套样式；联机页顶栏的 <code>A− / A+</code> 仍可调字号。<b>姬路城</b>联机入口按桌面宽度渲染后整体缩放，可拖动查看局部；其单机入口在窄屏会自动走等比缩放外壳页 <code>net/client/phone.html</code>（按最小可用宽度排版后整体缩到屏幕宽），顶栏可切「原尺寸 / 适配」。<br>
+  <span style="color:#e6c89a">纯静态部署（GitHub Pages / git 静态页）只支持「同一浏览器、同一站点的多个窗口」联机；跨设备或跨浏览器必须运行 <code>node net/server/server.js</code>（本在线站点即以该 Node 服务方式部署）。</span>
+</div>
+
+<footer>
+  在 <code>my_games/</code> 根目录启动 Live Server 后访问本页即可。<br>
+  联机层只对 <code>net/</code> 下的文件生效，两个游戏本体文件零改动。
+</footer>
+
+<script>
+/* 游戏卡片优先由根目录 games.json 渲染；fetch 失败时保留上面的静态兜底。
+   窄屏（手机 / 平板竖屏）把需要缩放外壳的单机入口切到 net/client/phone.html。 */
+(function () {
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function cardHtml(g) {
+    var soloHref = g.entry;
+    var phoneAttr = '';
+    if (g.phoneShell && g.phoneEntry) {
+      phoneAttr = ' data-desk="' + esc(g.entry) + '" data-phone="' + esc(g.phoneEntry) + '"';
+    }
+    return '<div class="card ' + esc(g.theme || '') + '">' +
+      '<div class="tag">' + esc(g.tag || '') + '</div>' +
+      '<h2>' + esc(g.title || '') + '</h2>' +
+      '<p class="sub">' + esc(g.subtitle || '') + '</p>' +
+      '<p class="desc">' + esc(g.description || '') + '</p>' +
+      '<p class="mode-label">选择对战模式</p>' +
+      '<div class="modes">' +
+        '<a class="mode solo" href="' + esc(soloHref) + '"' + phoneAttr + '>' +
+          '<b>' + esc(g.soloLabel || '玩家 vs AI') + '</b><span>' + esc(g.soloNote || '') + '</span>' +
+        '</a>' +
+        '<a class="mode pvp" href="' + esc(g.netEntry || '') + '">' +
+          '<b>' + esc(g.pvpLabel || '玩家 vs 玩家') + '</b><span>' + esc(g.pvpNote || '') + '</span>' +
+        '</a>' +
+      '</div>' +
+      '<div class="path">./' + esc(g.entry || '') + '</div>' +
+    '</div>';
+  }
+  function render(cfg) {
+    var list = cfg && cfg.games ? Object.keys(cfg.games).map(function (k) {
+      return Object.assign({ key: k }, cfg.games[k]);
+    }).sort(function (a, b) { return (a.order || 0) - (b.order || 0); }) : [];
+    if (!list.length) return;
+    var grid = document.getElementById('gameGrid');
+    grid.innerHTML = list.map(cardHtml).join('');
+  }
+  var mq = window.matchMedia('(max-width: 820px)');
+  function syncPhone() {
+    var links = document.querySelectorAll('[data-phone]');
+    for (var i = 0; i < links.length; i++) {
+      links[i].setAttribute('href', mq.matches ? links[i].getAttribute('data-phone')
+                                                : links[i].getAttribute('data-desk'));
+    }
+  }
+  if (mq.addEventListener) mq.addEventListener('change', syncPhone);
+  else if (mq.addListener) mq.addListener(syncPhone);
+  syncPhone();
+  fetch('games.json', { cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+    .then(function (cfg) { render(cfg); syncPhone(); })
+    .catch(function () { /* 静态兜底 */ });
+})();
+</script>
+
+</body>
+</html>
