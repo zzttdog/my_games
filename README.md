@@ -41,7 +41,7 @@ my_games/
 ├── net/
 │   ├── server/                # server.js、warmup.js
 │   ├── client/                # play.html、phone.html、bridge.js、save.js、preload.js、img-list.js、games.js、mobile-shell.js
-│   ├── tools/                 # gen-games-js.py、gen-imglist.py、gen-webp.py
+│   ├── tools/                 # gen-games-js.py、gen-imglist.py、gen-webp.py、replay-ai.py
 │   └── play.html / phone.html / server.js / warmup.js   # 旧入口兼容层
 └── P1-P2-项目结构梳理.md
 ```
@@ -66,7 +66,34 @@ MGSave.exportFile()
 
 会下载一个 `mygames-<game>-<mode>-<时间>.json`。导入用 `MGSave.importFile()`，选择同一个 JSON 即可。
 
-## 已知边界
+## AI 复盘（联机房主）
+
+静态 GitHub Pages 不能写 `/net/save`，所以联机复盘走“房主本地记录 + 手动导出 JSON”：
+
+1. 联机房主窗口右下角会出现“导出复盘”按钮；点击下载
+   `mygames-replay-<game>-<room>-<match>-<时间>.json`。
+2. 复盘包只由主机记录，包含：
+   - `frames`：每个回合开始时的紧凑状态（玩家版图 / 卡牌 / 保护区 / 公共市场 / 供应区 / 牌堆数量）；
+   - `events`：游戏日志中的每一条动作；
+   - `final`：终局状态 + `scoreBoard` 分数明细；
+   - `log`：完整游戏日志。
+3. 把导出的 JSON 交给 AI，或在本机跑：
+
+```powershell
+python net/tools/replay-ai.py --file mygames-replay-harmonies-9999-mabc-....json
+python net/tools/replay-ai.py --file <replay.json> --json
+```
+
+`--json` 输出机器可读的玩家统计和改进点；默认输出 Markdown 复盘报告。
+复盘包存在主机浏览器 `localStorage` 的 `mygames.replay.<game>.<room>.<match>`；
+中途也可以导出当前快照，不要求打完。
+
+限制：
+- 只有房主能记录；客机没有完整状态，按钮不会出现。
+- PeerJS / 静态 Pages 不会自动上传，必须手动导出。
+- 复盘包不包含隐藏牌堆/袋子的全部内容，只保留数量；这是为了避免 localStorage 配额和给 AI 塞无效信息。
+
+
 
 - P2 拆分保持经典脚本 + 全局函数名，方便 `save.js` / `bridge.js` 继续通过 `window.eval('G')` 和全局函数工作；不是 ES Module，没有构建步骤。
 - `net/client/bridge.js` 的 per-game 适配器已收敛为 `ADAPTERS` 注册表；联机桥时序敏感，暂不拆成多个网络请求文件。
@@ -75,24 +102,20 @@ MGSave.exportFile()
 
 ## 体积现状与瘦身建议
 
-当前工作区约 **319.4 MB**，但运行时真正需要的大约 **65–70 MB**。主要占用：
+当前工作区约 **58.4 MB**（2026-11-16 删除旧 `.git` 后）。运行时需要的主要是：
+`Harmonies/Images/cards`、`The White Castle/assets` 的 `-web` 版图、以及游戏脚本 / CSS。
 
-| 目录 / 文件 | 占用 | 是否运行时需要 |
+旧版本库已清理：
+
+| 已删除 | 原占用 | 说明 |
 |---|---:|---|
-| 根 `.git` | 229.9 MB | 否（版本历史；部署/打包不需要） |
-| `Harmonies/自然和弦（含律动扩）` | 110.2 MB | 否（规则书/Mod 原始素材，含 49 MB zip） |
-| `Harmonies/Images/ref` | 73.7 MB（其中 `ref/gpt` 47.7 MB） | 只有 `ref/card_back_dark.jpg` 被 `render.js` 引用，其余是设计参考 |
-| `Harmonies/Images/cards` | 23.6 MB | 是（卡图） |
-| `The White Castle/assets` | 39 MB | 是（但四张全尺寸版图可移出部署包） |
-| `The White Castle/.git` | 31.2 MB | 否（子仓库历史） |
+| 根 `.git` | 229.9 MB | 旧版本历史；已按用户确认删除 |
+| `The White Castle/.git` | 31.2 MB | 子项目历史；已按用户确认删除 |
 
-建议（按风险从低到高，均未在本轮执行删除）：
+非运行时素材仍保留在本机项目外的
+`E:\vscode_workspace\Trae_projects\my_games_archive_20261116`。
+删除后本地不再有 git 历史；需要版本管理时，请在云主机部署树或重新初始化仓库。
 
-1. 部署/打包排除根 `.git` 与 `The White Castle/.git`，只发布运行文件。
-2. 把 `Harmonies/自然和弦（含律动扩）` 移到项目外或 `_archive/`，不要让静态服务器暴露 110 MB 原始素材。
-3. `Images/ref` 只保留 `card_back_dark.jpg`；`ref/gpt`、`res/*_v2`、`patterns`、`官方旧版` 移到 `_archive/`，确认无引用后再删。
-4. `The White Castle/assets` 的全尺寸版图（`board-base/board-matcha/domain-base/domain-matcha`）移到 `_src/`，运行时只留 `-web` 版本；这样既减部署体积，也避免误引用。
-5. 如需保留历史又减小 `.git`，在有 git 的机器上执行 `git gc --aggressive --prune=now`；当前命令行没有 git，别在没备份时手工删 `.git`。
 ## 线上存档自动镜像（给 AI / 复盘工具读）
 
 联机房主窗口现在会把手里的存档镜像到服务端，**AI 不需要读浏览器 localStorage**，直接读文件即可：
@@ -123,7 +146,17 @@ python net/tools/read-online-save.py --game harmonies --room 9999 --history
 
 也可以直接 `Read` 上面路径的 `.json` 文件。
 
-## 联机流畅度改动（2026-11-16）
+## 联机修复（2026-11-16）
+
+- **2 真人 + AI 时 AI 不行动**：`bridge.js` 为了把“自己”映射到本地玩家 0，会重排 `players`；
+  原版 `advanceTurn()` 仍按本地数组顺序 `(G.cur + 1) % G.n` 交棒，客机结束回合会跳回房主而不是 AI。
+  已在桥内覆盖 `window.advanceTurn`：把本地 `cur` 换算成 wire 座位，`nextWire = (curWire + 1) % total`，
+  再映射回本地；回合清理、`round` 递增、`aiTurn()` 调用仍走原逻辑。
+- **供应区 / 手牌标记没有官方图案**：`.tok` 的 CSS 相对路径原来解析到 `Harmonies/css/Images/res/...`，
+  已改为 `../Images/res/...`（六种地形：water / mountain / trunk / tree / field / building）。
+- 联机页 iframe 增加 `_v=20261116b` 版本参数，避免浏览器继续用旧 `save.js`；改前端脚本后记得同步 bump。
+
+
 
 - 服务端 SSE 广播排除发送者自己，少一次回环传输和 JSON 解析。
 - `bridge.js` 的整状态广播从“立即 + 400ms + 1000ms 三遍”改为“60ms 合并 + 立即 + 500ms 补一次”，连续动作只发最后一份快照。
@@ -139,14 +172,14 @@ python net/tools/read-online-save.py --game harmonies --room 9999 --history
 - 大厅和 `bridge.js` 都保留 `net` / `local` 分支：Node SSE 与同浏览器 BroadcastChannel 仍可用。
 - PeerJS 库已内置在 `net/client/vendor/peerjs.min.js`（1.5.4，MIT），不依赖 CDN。
 - 默认使用 PeerJS Cloud 信令。当前只加 STUN，没有 TURN；双方处于对称 NAT / 移动网络时可能连不上。正式长期用建议自建 PeerServer + coturn，并在 `play.html` / `bridge.js` 替换信令和 ICE 配置。
-- PeerJS 只解决联机，不解决线上存档：静态站没有 `/net/save`；房主仍写本地 `localStorage`，AI 自动读取需要另接 Cloudflare Worker/Supabase 等中心存档端点。
+- PeerJS 只解决联机，不解决线上存档：静态站没有 `/net/save`；房主仍写本地 `localStorage`。AI 复盘请用“导出复盘”按钮，不依赖服务端。
 
 ## 瘦身归档（2026-11-16）
 
-项目从 **514.3 MB** 降到 **319.4 MB**，移出的约 195 MB 非运行时素材在：
+项目从 **514.3 MB** 降到 **58.4 MB**（含删除旧 `.git` 后的最终体积）；移出的约 195 MB 非运行时素材在：
 
 ```text
 E:\vscode_workspace\Trae_projects\my_games_archive_20261116
 ```
 
-归档说明和恢复命令见该目录的 `ARCHIVE-README.md`。根 `.git`（229.9 MB）和 `The White Castle/.git`（31.2 MB）仍未动，等待确认。
+归档说明和恢复命令见该目录的 `ARCHIVE-README.md`。根 `.git`（229.9 MB）和 `The White Castle/.git`（31.2 MB）已按确认删除。

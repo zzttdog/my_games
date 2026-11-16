@@ -44,6 +44,17 @@
   var booted = false, bootPending = false;
   var skippedLogged = false;
 
+  /* ── AI 复盘包：联机主机在本地记录，导出 JSON 给 AI/复盘脚本 ──
+     静态 GitHub Pages 没有 /net/save，因此不能依赖服务端落盘。
+     记录粒度：每个回合开始一帧 + 每条游戏日志一个事件；不记录 deck/pouch 全量。 */
+  var REPLAY_SCHEMA = 1;
+  var REPLAY_ROOM = (Q.get('net_room') || '0000').replace(/\D/g, '').slice(0, 4) || '0000';
+  var REPLAY_MATCH = Q.get('net_match') || 'm0';
+  var REPLAY_KEY = 'mygames.replay.' + A.key + '.' + REPLAY_ROOM + '.' + REPLAY_MATCH;
+  var replay = null, replayBtn = null;
+  var replayLastSig = '', replayLastCur = null, replayLastRound = null, replayLastLog = '';
+  var replayTimer = 0;
+
   /* ── 序列化：递归剔除不能打包成文字的字段 ───────────────── */
   function sanitize(v, path, stack, skipped) {
     if (v == null) return v;
@@ -173,16 +184,212 @@
     }).catch(function () {}).then(function () { uploadBusy = false; });
   }
 
+  /* ── AI 复盘包的读取、压缩、落盘、导出 ─────────────────── */
+  function replayLoad() {
+    try {
+      var raw = localStorage.getItem(REPLAY_KEY);
+      if (!raw) return null;
+      var d = JSON.parse(raw);
+      if (!d || d.kind !== 'mygames.replay' || d.schema !== REPLAY_SCHEMA ||
+          d.game !== A.key || !Array.isArray(d.frames)) return null;
+      return d;
+    } catch (e) { return null; }
+  }
+
+  function replayLatestLog() {
+    try {
+      var el = document.getElementById('log');
+      var first = el && el.firstElementChild;
+      if (!first) return '';
+      return String(first.textContent || '').replace(/^\[R\d+\]\s*/, '').trim();
+    } catch (e) { return ''; }
+  }
+
+  /* 只保留复盘真正需要的字段：玩家版图/卡牌/保护区 + 公共市场/供应区。
+       不把 deck / pouch 的全部卡表塞进每一帧，避免 localStorage 爆配额。 */
+  function replayCompact(st) {
+    if (!st || typeof st !== 'object') return null;
+    if (A.key !== 'harmonies') return st;
+    var out = {
+      side: st.side, mods: st.mods, n: st.n,
+      round: st.round, cur: st.cur, first: st.first, firstChoice: st.firstChoice,
+      over: !!st.over, endTriggered: !!st.endTriggered,
+      tookCard: !!st.tookCard, tookSanct: !!st.tookSanct,
+      players: (st.players || []).map(function (p) {
+        return {
+          name: p.name, isAI: !!p.isAI, board: p.board, cards: p.cards,
+          cubesPlaced: p.cubesPlaced || 0, sancts: p.sancts || [], spirit: p.spirit || null
+        };
+      }),
+      supply: st.supply || [], market: st.market || [], sanctOffer: st.sanctOffer || [],
+      pouchN: Array.isArray(st.pouch) ? st.pouch.length : 0,
+      deckN: Array.isArray(st.deck) ? st.deck.length : 0,
+      sanctDeckN: Array.isArray(st.sanctDeck) ? st.sanctDeck.length : 0
+    };
+    return JSON.parse(JSON.stringify(out));
+  }
+
+  function replayInit() {
+    if (replay) return;
+    replay = replayLoad();
+    if (!replay) {
+      replay = {
+        schema: REPLAY_SCHEMA, kind: 'mygames.replay', game: A.key, mode: MODE,
+        room: REPLAY_ROOM, match: REPLAY_MATCH, startedAt: Date.now(),
+        cfg: netCfg(), events: [], frames: []
+      };
+    }
+    /* 同一 room+match 恢复时继续沿用；配置以本次房间为准 */
+    replay.cfg = netCfg() || replay.cfg || {};
+    replayLastSig = ''; replayLastCur = null; replayLastRound = null; replayLastLog = '';
+  }
+
+  function replaySaveNow() {
+    if (!replay) return;
+    try {
+      localStorage.setItem(REPLAY_KEY, JSON.stringify(replay));
+    } catch (e) {
+      /* 配额满了：保留最近 30 帧 / 120 条事件后重试一次 */
+      try {
+        if (replay.frames.length > 30) replay.frames = replay.frames.slice(-30);
+        if (replay.events.length > 120) replay.events = replay.events.slice(-120);
+        localStorage.setItem(REPLAY_KEY, JSON.stringify(replay));
+      } catch (e2) {
+        try { console.warn('[复盘] 写入失败：' + (e2 && e2.message)); } catch (e3) {}
+      }
+    }
+  }
+  function queueReplaySave() {
+    if (replayTimer) return;
+    replayTimer = setTimeout(function () {
+      replayTimer = 0;
+      replaySaveNow();
+    }, 1200);
+  }
+
+  function replayScores(st) {
+    if (!st || !st.players) return null;
+    if (A.key !== 'harmonies') return null;
+    try {
+      var fn = window.scoreBoard;
+      if (typeof fn !== 'function') {
+        try { fn = window.eval('scoreBoard'); } catch (e) {}
+      }
+      if (typeof fn !== 'function') return null;
+      return st.players.map(function (p) { return fn(p); });
+    } catch (e) { return null; }
+  }
+
+  function replayFinalize(st) {
+    if (!replay || replay.finishedAt) return;
+    replay.finishedAt = Date.now();
+    replay.final = {
+      at: replay.finishedAt, round: st && st.round, cur: st && st.cur,
+      state: replayCompact(st), scores: replayScores(st)
+    };
+    try {
+      var lg = document.getElementById('log');
+      replay.log = lg ? lg.innerText : '';
+    } catch (e) { replay.log = ''; }
+    replaySaveNow();
+  }
+
+  function replayObserve(st, sig) {
+    if (!NET || SEAT !== 0 || !st) return;
+    replayInit();
+    if (!sig) { try { sig = JSON.stringify(st); } catch (e) { return; } }
+    if (sig === replayLastSig) return;
+    replayLastSig = sig;
+    var at = Date.now(), cur = st.cur, round = st.round;
+    var line = replayLatestLog();
+    if (line && line !== replayLastLog) {
+      replay.events.push({ at: at, round: round, cur: cur, text: line });
+      replayLastLog = line;
+      if (replay.events.length > 300) replay.events = replay.events.slice(-300);
+    }
+    if (cur !== replayLastCur || round !== replayLastRound) {
+      replay.frames.push({ at: at, round: round, cur: cur, state: replayCompact(st) });
+      replayLastCur = cur; replayLastRound = round;
+      if (replay.frames.length > 60) replay.frames = replay.frames.slice(-60);
+    }
+    if (st.over) replayFinalize(st);
+    else queueReplaySave();
+  }
+
+  function replayPackage() {
+    replayInit();
+    var st = A.plain();
+    if (st && !replay.final) {
+      /* 中途导出：也附上当前快照，AI 可以分析到这一步 */
+      replay.current = { at: Date.now(), round: st.round, cur: st.cur, state: replayCompact(st), scores: replayScores(st) };
+    }
+    var pack = JSON.parse(JSON.stringify(replay));
+    pack.exportedAt = Date.now();
+    return pack;
+  }
+
+  function exportReplay() {
+    if (!NET || SEAT !== 0) { toast('只有联机房主可以导出复盘'); return; }
+    try {
+      var st = A.plain();
+      if (st) replayObserve(st, JSON.stringify(st));
+      var pack = replayPackage();
+      var stamp = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/[\/: ]/g, '-');
+      var name = 'mygames-replay-' + A.key + '-' + REPLAY_ROOM + '-' + REPLAY_MATCH + '-' + stamp + '.json';
+      var blob = new Blob([JSON.stringify(pack, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click();
+      setTimeout(function () { URL.revokeObjectURL(url); if (a.parentNode) a.parentNode.removeChild(a); }, 1000);
+      toast('复盘已导出：' + name + '（可直接交给 AI 分析）');
+    } catch (e) {
+      toast('导出复盘失败：' + (e && e.message || e));
+    }
+  }
+
+  function ensureReplayButton() {
+    if (!NET || SEAT !== 0 || replayBtn || !document.body) return;
+    replayBtn = document.createElement('button');
+    replayBtn.type = 'button';
+    replayBtn.id = '__mg_replay_export';
+    replayBtn.textContent = '导出复盘';
+    replayBtn.title = '下载本局 JSON，可直接交给 AI 复盘';
+    replayBtn.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:99998;' +
+      'padding:7px 12px;border:1px solid #4a5a6e;border-radius:8px;background:#1b2430ee;' +
+      'color:#e6c89a;font:12px/1.3 system-ui,sans-serif;cursor:pointer;box-shadow:0 4px 14px #0008';
+    replayBtn.onclick = exportReplay;
+    document.body.appendChild(replayBtn);
+  }
+
+  /* 存档可能被「继续上次进度」弹窗挂起；复盘不能跟着停。
+     这里独立按 0.9 秒采样，只写内存帧，落盘仍由 replayObserve 节流。 */
+  var replayPoll = 0;
+  function startReplayPoll() {
+    if (replayPoll || !NET || SEAT !== 0) return;
+    replayPoll = setInterval(function () {
+      try {
+        var st = A.plain();
+        if (st) replayObserve(st, JSON.stringify(st));
+      } catch (e) { /* 不影响游戏 */ }
+    }, 900);
+  }
+
   function write() {
     if (!enabled || bootPending) return;
     try {
       if (!A.started()) return;
-      if (A.isOver()) { clear(); lastSig = null; return; }   // 终局清档
+      if (A.isOver()) {
+        var stOver = A.plain();
+        if (stOver) { try { replayObserve(stOver, JSON.stringify(stOver)); } catch (e) {} }
+        clear(); lastSig = null; return;                 // 终局清存档；复盘包保留
+      }
       var st = A.plain();
       if (!st) return;
       var sig = JSON.stringify(st);
       if (sig === lastSig) return;      // 同一状态不重复落盘（双层包装时会调用两次）
       lastSig = sig;
+      try { replayObserve(st, sig); } catch (e) {}
       store(st);
     } catch (e) {
       /* 配额超限/序列化异常：宁可丢档，也不要留下半截数据让下次读到 */
@@ -200,12 +407,17 @@
     if (!enabled || bootPending) return;
     try {
       if (!A.started()) return;
-      if (A.isOver()) { clear(); lastSig = null; return; }
+      if (A.isOver()) {
+        var stOver = A.plain();
+        if (stOver) { try { replayObserve(stOver, JSON.stringify(stOver)); } catch (e) {} }
+        clear(); lastSig = null; return;
+      }
       var st = A.plain();
       if (!st) return;
       var sig = JSON.stringify(st);
       if (sig === lastSig) return;
       lastSig = sig;
+      try { replayObserve(st, sig); } catch (e) {}
       store(st);
     } catch (e) { /* 轮询绝不能影响游戏 */ }
   }
@@ -391,15 +603,23 @@
       /* bridge.js 晚于本模块注入，会覆盖掉 installHooks() 挂上的包装；
          这里重挂一次（幂等），把存档包装放到调用链最外层。 */
       try { installHooks(); } catch (e) {}
-      if (NET && netMeta.seat === 0) { boot(); startPoll(); }
-      else enabled = true;
+      if (NET && netMeta.seat === 0) {
+        replayInit();
+        ensureReplayButton();
+        startReplayPoll();
+        boot();
+        startPoll();
+      } else enabled = true;
     },
     save: write,
     clear: clear,
     read: read,
     upload: uploadNet,
     exportFile: exportFile,
-    importFile: importFile
+    importFile: importFile,
+    exportReplay: exportReplay,
+    replayJSON: replayPackage,
+    replayKey: REPLAY_KEY
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

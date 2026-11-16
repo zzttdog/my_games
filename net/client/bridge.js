@@ -202,6 +202,34 @@
 
     var origAiTurn = window.aiTurn;
     window.aiTurn = function () {};          // 完全接管 AI 驱动
+
+    /* 联机交棒必须按「全局座位顺序」走，不能按本窗口重排后的本地数组顺序。
+       客机把本地 0 换成了自己，localToWire 可能是 [1,0,2]；原版 advanceTurn()
+       直接 G.cur = (G.cur + 1) % G.n，于是「座位 1 的真人结束回合」会跳回座位 0，
+       座位 2 的 AI 永远轮不到，表现为 2 真人 + AI 时 AI 不行动。
+       这里保留原版所有回合清理逻辑，只把「下一位」换算成 wire 座位再映射回本地。 */
+    window.advanceTurn = function () {
+      G.hand = []; G.handSel = -1; G.tookCard = false; G.cubeMode = null;
+      G.tookSanct = false;
+      G.undoStack = []; G.cubePlacedThisTurn = false;
+      var curWire = localToWire[G.cur];
+      var nextWire = (curWire + 1) % TOTAL;
+      var firstWire = localToWire[G.first];
+      G.cur = wireToLocal[nextWire];
+      var newRound = (nextWire === firstWire);
+      if (newRound) G.round++;
+      if (G.cur === 0 && !G.over) {
+        try { saveRoundStart(); } catch (e) {}
+      }
+      renderAll();
+      if (G.endTriggered && newRound) { gameOver(); return; }
+      if (G.cur === 0) {
+        setMsg('第 ' + G.round + ' 轮 · 你的回合:点击供应区取一组标记');
+      } else {
+        setMsg(G.players[G.cur].name + ' 思考中…');
+        aiTurn();
+      }
+    };
     /* 撤回：原版的 pushUndo / saveRoundStart 只快照「本地 players[0]」，在联机里
        本地 0 正好就是「我自己这个座位」，所以原样沿用即可。
        之前这里把两者都换成了空函数，导致 G.undoStack 永远为空、G.roundStart 永远为 null，

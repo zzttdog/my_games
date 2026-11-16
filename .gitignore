@@ -12,6 +12,8 @@ net/_*
 
 # 线上对局存档（由房主自动上传，含完整对局数据，不提交）
 net/server/saves/
+# AI 复盘导出（含玩家对局数据，不提交）
+net/replays/
 
 # 系统与编辑器
 .DS_Store

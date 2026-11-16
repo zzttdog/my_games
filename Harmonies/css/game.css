@@ -59,12 +59,12 @@
   .tok.water{background-color:#4a7fb5}.tok.mountain{background-color:#8a8f98}
   .tok.trunk{background-color:#7a5a3a}.tok.tree{background-color:#4f8a3f}
   .tok.field{background-color:#d4b84a}.tok.building{background-color:#b5544a}
-  .tok.water{background-image:url('Images/res/water.png')}
-  .tok.mountain{background-image:url('Images/res/mountain.png')}
-  .tok.trunk{background-image:url('Images/res/trunk.png')}
-  .tok.tree{background-image:url('Images/res/tree.png')}
-  .tok.field{background-image:url('Images/res/field.png')}
-  .tok.building{background-image:url('Images/res/building.png')}
+  .tok.water{background-image:url('../Images/res/water.png')}
+  .tok.mountain{background-image:url('../Images/res/mountain.png')}
+  .tok.trunk{background-image:url('../Images/res/trunk.png')}
+  .tok.tree{background-image:url('../Images/res/tree.png')}
+  .tok.field{background-image:url('../Images/res/field.png')}
+  .tok.building{background-image:url('../Images/res/building.png')}
   /* 手牌 */
   .hand{display:flex;gap:8px;min-height:48px;align-items:center;justify-content:center}
   .hand .tok{width:44px;height:44px;cursor:pointer;font-size:.75rem;transition:transform .1s,box-shadow .1s}
