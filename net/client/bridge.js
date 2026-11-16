@@ -291,10 +291,15 @@
         hideVeil();
       };
       try {
-        var key = { A: 'board_A.jpg', B: 'board_B.jpg', C: 'board_C.png', D: 'board_D.png' }[G.side] || 'board_A.jpg';
+        var key = { A: 'board_A.jpg.webp', B: 'board_B.jpg.webp', C: 'board_C.png.webp', D: 'board_D.png.webp' }[G.side] || 'board_A.jpg.webp';
+        var origKey = key.replace(/\.webp$/, '');
         var im = new Image();
         im.onload = fin;
-        im.onerror = fin;
+        im.onerror = function () {
+          if (done) return;
+          im.onerror = fin;
+          im.src = 'Images/res/' + origKey;
+        };
         im.src = 'Images/res/' + key;
       } catch (e) { fin(); return; }
       veilTimer = setTimeout(fin, 2000);

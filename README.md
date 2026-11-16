@@ -51,7 +51,7 @@ my_games/
 1. 改 `games.json`（游戏名、入口、手机入口、联机默认规则、素材目录）。
 2. 生成浏览器配置：`python net/tools/gen-games-js.py`（写 `net/client/games.js`，勿手改）。
 3. 生成 WebP 副本：`python net/tools/gen-webp.py`。
-4. 生成预加载清单：`python net/tools/gen-imglist.py`（只保留有 `-web` 副本的压缩版图，不再列全尺寸原图）。
+4. 生成预加载清单：`python net/tools/gen-imglist.py`（有 WebP 副本时列 `.webp`，页面 `MGImg` 加载失败回退原图；不再列全尺寸重复图）。
 5. 联机预热：`node net/server/warmup.js`（域名 / sharecode 从 `games.json` 的 `runtime` 读取，也可用 `MG_BASE` 覆盖）。
 
 ## 存档
@@ -154,11 +154,11 @@ python net/tools/read-online-save.py --game harmonies --room 9999 --history
   再映射回本地；回合清理、`round` 递增、`aiTurn()` 调用仍走原逻辑。
 - **供应区 / 手牌标记没有官方图案**：`.tok` 的 CSS 相对路径原来解析到 `Harmonies/css/Images/res/...`，
   已改为 `../Images/res/...`（六种地形：water / mountain / trunk / tree / field / building）。
-- 联机页 iframe 增加 `_v=20261116e` 版本参数，避免浏览器继续用旧 `save.js`；改前端脚本后记得同步 bump。
+- 联机页 iframe 增加 `_v=20261116f` 版本参数，避免浏览器继续用旧 `save.js`；改前端脚本后记得同步 bump。
 
 ## 静态资源缓存（2026-11-16）
 
-- 本地 Node 静态服务：图片是 `public, max-age=86400`；游戏脚本 / 样式 / 联机桥 / PeerJS 使用 `?v=20261116e` 版本地址，带版本参数的 JS/CSS 返回 `public, max-age=31536000, immutable`；HTML 保持 `no-cache`。
+- 本地 Node 静态服务：图片是 `public, max-age=86400`；游戏脚本 / 样式 / 联机桥 / PeerJS 使用 `?v=20261116f` 版本地址，带版本参数的 JS/CSS 返回 `public, max-age=31536000, immutable`；HTML 保持 `no-cache`。
 - GitHub Pages 不能自定义缓存头，GitHub 自身固定约 `max-age=600`；版本号仍保证更新后不会继续用旧脚本，缓存命中时传输量仍是 0 或 304。
 - 联机页不再用 `fetch(..., { cache: 'no-store' })` 拉 `bridge.js` 和 `peerjs.min.js`，改为版本地址 + `force-cache`；刷新大厅和进入房间都不会重新下载这两个脚本。
 - 游戏页首屏预热过一次并完整完成后，会在 `localStorage` 记一个 `mygames.preload.warm.<game>`，之后不再弹全屏“正在载入游戏资源”遮罩；图片仍由游戏自身的 `<img>` 从浏览器缓存读取。

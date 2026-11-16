@@ -70,6 +70,10 @@ body {
   background:
     linear-gradient(180deg, rgba(8, 7, 6, 0.82), rgba(10, 8, 7, 0.92)),
     url("../assets/texture-dark.jpg") center / cover fixed;
+  background:
+    linear-gradient(180deg, rgba(8, 7, 6, 0.82), rgba(10, 8, 7, 0.92)),
+    image-set(url("../assets/texture-dark.jpg.webp") type("image/webp"),
+              url("../assets/texture-dark.jpg") type("image/jpeg")) center / cover fixed;
 }
 
 /* 页面四周的柔和光斑（朱红 / 金 / 松绿），纯装饰 */
@@ -865,6 +869,10 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
   background:
     linear-gradient(rgba(8, 7, 6, 0.80), rgba(10, 8, 7, 0.93)),
     url("../assets/board-base-web.jpg") center / cover no-repeat;
+  background:
+    linear-gradient(rgba(8, 7, 6, 0.80), rgba(10, 8, 7, 0.93)),
+    image-set(url("../assets/board-base-web.jpg.webp") type("image/webp"),
+              url("../assets/board-base-web.jpg") type("image/jpeg")) center / cover no-repeat;
 }
 
 .setup-card {

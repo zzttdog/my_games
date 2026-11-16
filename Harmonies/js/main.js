@@ -113,7 +113,7 @@ document.addEventListener('click', e => {
   const c = e.target.closest && e.target.closest('.acard');
   if (!c) return;
   const img = c.querySelector('img.aimg');
-  if (img) { pinnedSrc = img.getAttribute('src'); showPreview(pinnedSrc); }
+  if (img) { pinnedSrc = img.currentSrc || img.getAttribute('src'); showPreview(pinnedSrc); }
 });
 document.getElementById('previewCard').addEventListener('click', () => { pinnedSrc = null; resetPreview(); });
 
@@ -129,10 +129,10 @@ function renderAidPreview() {
   if (!el) return;
   el.innerHTML = '';
   const side = document.querySelector('#sideOpts .opt.on').dataset.v;
-  const img = AID_CARDS[side];
+  const img = webpSrc(AID_CARDS[side]);
   const d = document.createElement('div');
   d.className = 'acard aid';
-  if (img) d.innerHTML = `<img class="aimg" src="${img}" alt="${side}面提示卡" draggable="false"><div class="nm">${side}面计分</div>`;
+  if (img) d.innerHTML = `<img class="aimg" src="${img}" alt="${side}面提示卡" draggable="false" onerror="MGImg.fallback(this)"><div class="nm">${side}面计分</div>`;
   else d.innerHTML = `<div class="aid-ph">${side}面提示卡<br>待补图</div>`;
   el.appendChild(d);
 }
@@ -143,10 +143,10 @@ function renderGameAid() {
   const el = document.getElementById('gameAid');
   if (!el) return;
   el.innerHTML = '';
-  const img = AID_CARDS[G.side];
+  const img = webpSrc(AID_CARDS[G.side]);
   const d = document.createElement('div');
   d.className = 'acard aid';
-  if (img) d.innerHTML = `<img class="aimg" src="${img}" alt="${G.side}面提示卡" draggable="false"><div class="nm">${G.side}面计分</div>`;
+  if (img) d.innerHTML = `<img class="aimg" src="${img}" alt="${G.side}面提示卡" draggable="false" onerror="MGImg.fallback(this)"><div class="nm">${G.side}面计分</div>`;
   else d.innerHTML = `<div class="aid-ph">${G.side}面提示卡<br>待补图</div>`;
   el.appendChild(d);
 }

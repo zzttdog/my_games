@@ -155,7 +155,7 @@ function cardHtml(ci, opts = {}) {
   // 仅自然之灵在开局二选一弹窗保留计分说明 desc(玩家面板仍由 hidePat 隐藏)
   const reqs = (!opts.hidePat && ci.def.spirit) ? ci.def.desc : '';
   const iconHtml = ci.def.img
-    ? `<img class="aimg" src="${ci.def.img}" alt="${ci.def.name}" draggable="false">`
+    ? `<img class="aimg" src="${ci.def.img}" alt="${ci.def.name}" draggable="false" onerror="MGImg.fallback(this)">`
     : `<div class="ic">${ci.def.icon}</div>`;
   // 精灵牌也用与动物牌同尺寸的分数方格(淡紫色,见 .cubeslot.elf-slot),不再显示 2/5 纯文本
   const elfTitle = '紫色精灵方块:只能放在卡面带「*」的锚点格;与动物(橙)方块同格 5 分/格,单独 2 分/格;不能与自然之灵(白)方块同格';
@@ -189,7 +189,7 @@ function renderMarket() {
     if (!def) {
       const b = document.createElement('div');
       b.className = 'acard facedown market-card';
-      b.innerHTML = `<img class="aimg" src="Images/ref/card_back_dark.jpg" alt="卡背" draggable="false">`;
+      b.innerHTML = `<img class="aimg" src="${webpSrc('Images/ref/card_back_dark.jpg')}" alt="卡背" draggable="false" onerror="MGImg.fallback(this)">`;
       el.appendChild(b);
       continue;
     }
@@ -231,7 +231,7 @@ function renderSanctOffer() {
   G.sanctOffer.forEach(def => {
     const d = document.createElement('div');
     d.className = 'acard sanct';
-    d.innerHTML = `<img class="aimg" src="${def.imgA}" alt="${def.name}建设中" draggable="false">
+    d.innerHTML = `<img class="aimg" src="${def.imgA}" alt="${def.name}建设中" draggable="false" onerror="MGImg.fallback(this)">
       <div class="nm">${def.name}</div>
       <div class="layers" title="按此 4 层顺序(下→上)在 1 格堆叠,可突破一般放置规则">
         ${def.layers.map(t => `<i style="background:${TYPES[t].color}" title="${TYPES[t].name}"></i>`).join('')}
@@ -272,7 +272,7 @@ function renderDoneCards() {
     doneSancts.forEach(s => {
       const d = document.createElement('div');
       d.className = 'acard sanct done';
-      d.innerHTML = `<img class="aimg" src="${s.def.imgB}" alt="${s.def.name}" draggable="false">
+      d.innerHTML = `<img class="aimg" src="${s.def.imgB}" alt="${s.def.name}" draggable="false" onerror="MGImg.fallback(this)">
         <div class="nm">${s.def.name}</div>
         <div class="badge" style="background:#2f7f5a;color:#fff">完成</div>`;
       doneEl.appendChild(d);
@@ -292,7 +292,7 @@ function renderActiveSancts() {
       if (s.done) return;
       const d = document.createElement('div');
       d.className = 'acard sanct-active';
-      d.innerHTML = `<img class="aimg" src="${s.def.imgA}" alt="${s.def.name}" draggable="false">
+      d.innerHTML = `<img class="aimg" src="${s.def.imgA}" alt="${s.def.name}" draggable="false" onerror="MGImg.fallback(this)">
         <div class="nm">${s.def.name}${s.site ? ` · 建造中 ${s.site}` : ''}</div>
         <div class="badge" style="background:${s.site ? '#2f7f5a' : '#8a7a3f'};color:#fff">${s.def.layers.map(ty=>TYPES[ty].short).join('→')}</div>`;
       d.title = `按此4层样式(下→上)放置标记可突破一般规则,堆叠匹配即完成。${s.site ? `已锁定在格 ${s.site} 建造,同一板块不能同时在多个格子突破规则` : '每个板块只能同时在一个格子建造'}`;

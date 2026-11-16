@@ -131,7 +131,7 @@
   var hardTimer = setTimeout(function () { release('timeout'); }, TIMEOUT);
 
   function loadOne(src, cb) {
-    var im = new Image(), fin = false;
+    var im = new Image(), fin = false, triedFallback = false;
     function finish() {
       if (fin) return;
       fin = true;
@@ -139,7 +139,14 @@
       cb();
     }
     im.onload = finish;
-    im.onerror = finish;           // 失败也计入完成，绝不阻塞
+    im.onerror = function () {
+      /* 清单现在直接列 .webp；旧浏览器不支持 WebP 时回退原图，不让预加载卡死。 */
+      if (!fin && !triedFallback && /\.webp(?:[?#]|$)/i.test(src)) {
+        triedFallback = true;
+        try { im.src = src.replace(/\.webp(?=[?#]|$)/i, ''); return; } catch (e) {}
+      }
+      finish();
+    };           // 失败也计入完成，绝不阻塞
     setTimeout(finish, PER_IMG);   // 挂起兜底；请求本身不取消，让缓存继续填充
     try { im.src = src; } catch (e) { finish(); }
   }

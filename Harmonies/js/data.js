@@ -9,14 +9,28 @@ const TYPES = {
   field:    { name:'田野', short:'黄', color:'#d4b84a', img:'Images/res/field.png' },
   building: { name:'建筑', short:'红', color:'#b5544a', img:'Images/res/building.png' },
 };
-/* 图片缓存:加载完成后自动重绘 */
+/* 图片缓存:加载完成后自动重绘
+   GitHub Pages 是静态站，不执行 server.js 的 Accept 协商：这里显式请求
+   「原文件名.webp」，加载失败时再回退到原图（旧浏览器 / 极少数缺副本）。 */
+function webpSrc(src) {
+  return (window.MGImg && MGImg.webp) ? MGImg.webp(src) : src;
+}
 const tokImgs = {}, cardImgs = {}, boardImgs = {};
 function loadImg(cache, keyStr, src) {
   const im = new Image();
   im.onload = () => { cache[keyStr] = im; if (G.players.length) renderAll(); };
-  im.src = src;
+  im.onerror = () => {
+    if (/\.webp(?:[?#]|$)/i.test(im.src)) {
+      im.onerror = null;
+      im.src = im.src.replace(/\.webp(?=[?#]|$)/i, '');
+    }
+  };
+  im.src = webpSrc(src);
 }
-for (const t in TYPES) loadImg(tokImgs, t, TYPES[t].img);
+for (const t in TYPES) {
+  TYPES[t].img = webpSrc(TYPES[t].img);
+  loadImg(tokImgs, t, TYPES[t].img);
+}
 loadImg(boardImgs, 'boardA', 'Images/res/board_A.jpg'); // A 面版图底图(经六边形中心检测对齐画布)
 loadImg(boardImgs, 'boardB', 'Images/res/board_B.jpg'); // B 面版图底图(经六边形中心检测对齐画布)
 loadImg(boardImgs, 'boardC', 'Images/res/board_C.png'); // C 面版图(26 格,中央空穴)
@@ -114,7 +128,7 @@ function isSpiritCube(cube) {
 const ANIMAL_DIR = 'Images/cards/动物', SPIRIT_DIR = 'Images/cards/自然之灵', PULSE_DIR = 'Images/cards/Pulse';
 for (const c of [...BASE_CARDS, ...SPIRIT_CARDS, ...PULSE_CARDS]) {
   const dir = BASE_CARDS.includes(c) ? ANIMAL_DIR : SPIRIT_CARDS.includes(c) ? SPIRIT_DIR : PULSE_DIR;
-  c.img = `${dir}/${c.name}.jpg`;
+  c.img = webpSrc(`${dir}/${c.name}.jpg`);
   loadImg(cardImgs, c.img, c.img);
 }
 
@@ -156,12 +170,12 @@ const SANCT_CARDS = [
 
 // ---- 精灵卡/保护区卡插画(用户切图素材:精灵 ,保护区_a=建设中面/b=完成面) ----
 for (let i = 0; i < ELF_CARDS.length; i++) {
-  ELF_CARDS[i].img = `Images/cards/精灵/精灵牌${String(i+1).padStart(2,'0')}.png`;
+  ELF_CARDS[i].img = webpSrc(`Images/cards/精灵/精灵牌${String(i+1).padStart(2,'0')}.png`);
   loadImg(cardImgs, ELF_CARDS[i].img, ELF_CARDS[i].img);
 }
 for (let i = 0; i < SANCT_CARDS.length; i++) {
-  SANCT_CARDS[i].imgA = `Images/cards/保护区/保护区牌${String(i+1).padStart(2,'0')}_a.jpg`;
-  SANCT_CARDS[i].imgB = `Images/cards/保护区/保护区牌${String(i+1).padStart(2,'0')}_b.jpg`;
+  SANCT_CARDS[i].imgA = webpSrc(`Images/cards/保护区/保护区牌${String(i+1).padStart(2,'0')}_a.jpg`);
+  SANCT_CARDS[i].imgB = webpSrc(`Images/cards/保护区/保护区牌${String(i+1).padStart(2,'0')}_b.jpg`);
   loadImg(cardImgs, SANCT_CARDS[i].imgA, SANCT_CARDS[i].imgA);
   loadImg(cardImgs, SANCT_CARDS[i].imgB, SANCT_CARDS[i].imgB);
 }

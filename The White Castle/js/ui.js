@@ -7,6 +7,9 @@
   const D = window.WCData, E = window.WCEngine, A = window.WCAI;
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  /* 静态 Pages 没有 Node 的 Accept 协商：卡图显式请求「原名.webp」，失败回退原图。 */
+  const assetSrc = (file) => (window.MGImg && MGImg.webp) ? MGImg.webp(file) : file;
+  const fallbackAttr = (window.MGImg && MGImg.fallback) ? ' onerror="MGImg.fallback(this)"' : '';
 
   const S = { g: null, opts: { players: 2, seat: 0, diff: 'normal' }, cards: [] };
 
@@ -14,11 +17,11 @@
   /* 卡图裁切：castle-a/b 的配对图只取一半；房间卡只取上半（下半是灰色剪影装饰） */
   const POS = { left: 'left center', right: 'right center', top: 'top center' };
   const imgThumb = (file, cls, clip, tip) => file
-    ? `<img class="art-thumb file ${cls || ''}" src="assets/${file}" alt=""${tip ? ` title="${esc(tip)}"` : ''} style="object-fit:cover;object-position:${POS[clip] || 'center'}">`
+    ? `<img class="art-thumb file ${cls || ''}" src="assets/${assetSrc(file)}" alt=""${tip ? ` title="${esc(tip)}"` : ''}${fallbackAttr} style="object-fit:cover;object-position:${POS[clip] || 'center'}">`
     : '';
   /* 版图上的卡图：整张卡铺满卡位，中文信息只放在 title（悬浮）里 */
   const cardImg = (file, cls, tip) => file
-    ? `<img class="bcard ${cls || ''}" src="assets/${file}" alt=""${tip ? ` title="${esc(tip)}"` : ''}>`
+    ? `<img class="bcard ${cls || ''}" src="assets/${assetSrc(file)}" alt=""${tip ? ` title="${esc(tip)}"` : ''}${fallbackAttr}>`
     : `<span class="bcard noimg"${tip ? ` title="${esc(tip)}"` : ''}></span>`;
   const courtThumb = (card, tip) => card && card.imgFile ? cardImg(card.imgFile, '', tip) : `<span class="bcard noimg"${tip ? ` title="${esc(tip)}"` : ''}></span>`;
 
@@ -194,7 +197,7 @@
       for (const d of DK) {
         const n = (g.outskirts.decks[d.key] || []).length;
         base += '<div class="outdeck' + (n ? '' : ' empty') + '" style="left:' + pct(d.x / 100) + ';top:' + pct(d.y / 100) + '" title="' + d.label + '剩余城郊卡 ' + n + ' 张">' +
-          '<img src="assets/cards/cut/_backs/' + d.back + '" alt="">' +
+          '<img src="assets/cards/cut/_backs/' + assetSrc(d.back) + '" alt=""' + fallbackAttr + '>' +
           '<b>' + n + '</b></div>';
       }
     }
@@ -210,7 +213,7 @@
           const m = (D.MARKERS || []).find((x) => x.id === mid);
           const pos = geo.mk[mi];
           if (!m || !pos) return;
-          base += `<div class="bslot mk-slot" style="left:${pct(pos[0])};top:${pct(pos[1])}"><img class="mkimg" src="assets/${m.img}" alt="" title="${esc(m.name)}"></div>`;
+          base += `<div class="bslot mk-slot" style="left:${pct(pos[0])};top:${pct(pos[1])}"><img class="mkimg" src="assets/${assetSrc(m.img)}" alt=""${fallbackAttr} title="${esc(m.name)}"></div>`;
         });
       }
       if (!geo.card) continue;
@@ -289,7 +292,7 @@
       const CUBE = { red: 'mk_a', black: 'mk_b', white: 'mk_c' };
       const put = (pos, mid, label) => {
         const m = byId(mid); if (!m || !pos) return;
-        base += `<div class="bslot mkcell" style="left:${pct(pos[0] / 100)};top:${pct(pos[1] / 100)}"><img class="mkimg" src="assets/${m.img}" alt="" title="${esc(label)}：${esc(m.name)}"></div>`;
+        base += `<div class="bslot mkcell" style="left:${pct(pos[0] / 100)};top:${pct(pos[1] / 100)}"><img class="mkimg" src="assets/${assetSrc(m.img)}" alt=""${fallbackAttr} title="${esc(label)}：${esc(m.name)}"></div>`;
       };
       const MC = D.MARKER_CELLS;
       for (const n of Object.keys(MC.nums)) put(MC.nums[n], CUBE[g.markers.cells[n]], '格 ' + n);
@@ -299,7 +302,7 @@
 
     $('#board').innerHTML =
       `<div class="bwrap" style="aspect-ratio:${B.ratio}">
-         <img class="bimg" src="assets/${B.img}" alt="基础版图">
+         <img class="bimg" src="assets/${assetSrc(B.img)}" alt="基础版图"${fallbackAttr}>
          <div class="blabel">基础版图</div>${base}
        </div>`;
   }
@@ -374,7 +377,7 @@
              其他卡 → backFile（卡背图，灯笼区显示的是卡背不是正面） */
         const src = c.isDecree ? (c.imgFile || '') : (c.backFile || c.imgFile || '');
         const face = src
-          ? '<img src="assets/' + src + '" alt="">'
+          ? '<img src="assets/' + assetSrc(src) + '" alt=""' + fallbackAttr + '>'
           : '<span class="plantern-glyph">' + esc(c.glyph || String(c.name || c.id || '?').slice(0, 1)) + '</span>';
         return '<div class="plantern' + (c.isDecree ? ' is-decree' : '') + '" title="' + esc(tip) + '">' + face + '</div>';
       }).join('');
@@ -428,7 +431,7 @@
 
       return `<div class="pcard ${p.id === cur ? 'active' : ''}" style="--pc:${p.color.hex}">
         <div class="pwrap" style="aspect-ratio:${A.ratio}">
-          <img class="pimg" src="assets/${A.img}" alt="个人领地">
+          <img class="pimg" src="assets/${assetSrc(A.img)}" alt="个人领地"${fallbackAttr}>
           ${qdice}${cardHtml}${domSlots}
           ${lanCards ? `<div class="plantern-strip" style="left:${pct(LANT[0])};top:${pct(LANT[1])};right:1.2%">${lanCards}</div>` : ''}
         </div>
@@ -645,8 +648,8 @@
     <p><b>轮末</b>：桥上剩 3 颗骰时结束本轮：按影响力重排顺位（同格按堆叠）→ 庭院再激活 → 收骰重掷。共 3 轮，每轮每人 3 回合。</p>
     <p><b>终局</b>：资源(3 个 1 分 / 7 个 2 分) + 时间轨季节分(0/3/6/10–15) + 家臣层级(1/3/6/10) + 武士价值×城堡内家臣数 + 庭院卡金扇子 + 红扇 + (钱+纹)/5。</p>`));
   $('#btnBoard').addEventListener('click', () => showStatic('版图原图', `
-    <p style="opacity:.7">基础版图</p><img src="assets/board-base-web.jpg" style="width:100%">
-    <p style="opacity:.7">个人领地</p><img src="assets/domain-base-web.jpg" style="width:100%">`));
+    <p style="opacity:.7">基础版图</p><img src="assets/${assetSrc('board-base-web.jpg')}" style="width:100%"${fallbackAttr}>
+    <p style="opacity:.7">个人领地</p><img src="assets/${assetSrc('domain-base-web.jpg')}" style="width:100%"${fallbackAttr}>`));
   $('#btnRestart').addEventListener('click', () => { if (confirm('重开一局？')) { endShown = false; showSetup(); } });
 
   /* ── 版图缩放：用 CSS 变量 --board-scale 控制 .bwrap 宽度，整张版图（含骰位叠层）等比缩放 ── */
