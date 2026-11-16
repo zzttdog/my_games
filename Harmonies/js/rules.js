@@ -3,6 +3,7 @@
  * 规则引擎
  * ============================================================ */
 function topType(cell) { return cell.stack.length ? cell.stack[cell.stack.length - 1] : null; }
+function tokenCount(cell, type) { return cell.stack.filter(t => t === type).length; }
 
 /* 一般放置规则(不含保护区许可) */
 function basicCanPlace(h, top, type) {
@@ -208,9 +209,22 @@ function localProgress(def, board, k, player) {
 }
 
 /* ===== 计分 ===== */
+/* 保护区是特殊建筑，不当作普通地形计分；完成格和建造中的锁定格都排除。
+   官方 Crescendo：保护区本身不算普通河流/山/田野；只有相邻格的最顶标记参与它的得分。 */
+function sanctuaryCells(p) {
+  const out = new Set();
+  for (const s of (p.sancts || [])) {
+    if (s.pos) out.add(s.pos);
+    if (!s.done && s.site) out.add(s.site);
+  }
+  return out;
+}
 function scoreBoard(p) {
   const b = p.board;
   const side = G.side, D_PTS = { 1: 2, 2: 4, 3: 9 }; // D 面树木高度分值(官方)
+  const sanctuary = sanctuaryCells(p);
+  const normal = {};
+  for (const k in b) if (!sanctuary.has(k)) normal[k] = b[k];
   // D 面干旱格:与水相邻 → 视为常规格(计分时)
   const isRegular = (cell, k) => {
     if (!cell.dry) return true;
@@ -219,6 +233,7 @@ function scoreBoard(p) {
   };
   let tree = 0, mountain = 0, field = 0, building = 0, water = 0, animal = 0, spirit = 0, elf = 0, sanctPts = 0;
   for (const k in b) {
+    if (sanctuary.has(k)) continue;
     const cell = b[k], top = topType(cell);
     if (top === 'tree') {
       if (side === 'D') { if (isRegular(cell, k)) tree += D_PTS[cell.stack.length] || 0; }
@@ -240,17 +255,18 @@ function scoreBoard(p) {
     }
   }
   // 田野:A/C 2+ 连片每组 5 分;D 面需 ≥1 格为常规格才得 6 分(官方)
+  // 只沿普通格连通；保护区特殊堆叠不作为田野连通桥。
   const seenF = new Set();
   for (const k in b) {
-    if (topType(b[k]) !== 'field' || seenF.has(k)) continue;
-    const grp = flood(b, k, c => topType(c) === 'field');
+    if (sanctuary.has(k) || topType(b[k]) !== 'field' || seenF.has(k)) continue;
+    const grp = flood(normal, k, c => topType(c) === 'field');
     grp.forEach(g => seenF.add(g));
     if (grp.length < 2) continue;
     if (side === 'D') { if (grp.some(g => isRegular(b[g], g))) field += 6; }
     else field += 5;
   }
-  // 水:按版面
-  water = scoreWater(p);
+  // 水:按版面;保护区堆叠不当作普通河流
+  water = scoreWater(p, sanctuary);
   // 动物卡：只计真正的动物卡；精灵牌 / 自然之灵卡有自己的计分分支，
   // 不能把它们卡上的 2/5 分混进 animal。
   for (const ci of p.cards) if (ci.placed > 0) {
@@ -291,8 +307,11 @@ function flood(board, start, pred) {
 /* 自然之灵专属计分(官方规则 + 霸王龙新规则) */
 function spiritScore(kind, b, pos) {
   const cells = Object.values(b);
-  const stackCount = (top, hs) => cells.filter(c => topType(c) === top && hs.includes(c.stack.length)).length;
-  const waterTokens = c => c.stack.filter(t => t === 'water').length;
+  const fieldTokens = c => tokenCount(c, 'field');
+  const treeHeight = c => tokenCount(c, 'tree') + tokenCount(c, 'trunk');
+  const mountainHeight = c => tokenCount(c, 'mountain');
+  const featureCount = (top, hs, height) => cells.filter(c => topType(c) === top && hs.includes(height(c))).length;
+  const waterTokens = c => tokenCount(c, 'water');
   const groupSizes = (pred, weight) => { // 各连通块的大小；weight 可按“枚数”而不是格数计
     const seen = new Set(), sizes = [];
     for (const k in b) {
@@ -305,14 +324,14 @@ function spiritScore(kind, b, pos) {
   };
   const isW = c => topType(c) === 'water', isF = c => topType(c) === 'field', isB = c => topType(c) === 'building';
   switch (kind) {
-    case 'f33':  return groupSizes(isF).reduce((s, n) => s + (n >= 3 ? 10 : 2), 0);
+    case 'f33':  return groupSizes(isF, fieldTokens).reduce((s, n) => s + (n >= 3 ? 10 : 2), 0);
     case 'f5':   return groupSizes(isF).length * 5;
-    case 't423': return stackCount('tree', [2, 3]) * 4;
-    case 't321': return stackCount('tree', [1, 2]) * 3 + stackCount('tree', [3]);
+    case 't423': return featureCount('tree', [2, 3], treeHeight) * 4;
+    case 't321': return featureCount('tree', [1, 2], treeHeight) * 3 + featureCount('tree', [3], treeHeight);
     case 'b4':   return groupSizes(isB).length * 4;
     case 'b6':   return groupSizes(isB).filter(n => n >= 2).length * 6;
-    case 'm423': return stackCount('mountain', [2, 3]) * 4;
-    case 'm321': return stackCount('mountain', [1, 2]) * 3 + stackCount('mountain', [3]);
+    case 'm423': return featureCount('mountain', [2, 3], mountainHeight) * 4;
+    case 'm321': return featureCount('mountain', [1, 2], mountainHeight) * 3 + featureCount('mountain', [3], mountainHeight);
     case 'w7':   return groupSizes(isW, waterTokens).filter(n => n >= 2).length * 7;
     case 'w2':   return cells.filter(isW).reduce((s, c) => s + waterTokens(c), 0) * 2;
     case 'adj2': { // 霸王龙:灵方块邻接或经动物方块连通的每个动物方块 +2
@@ -334,7 +353,7 @@ function spiritScore(kind, b, pos) {
   return 0;
 }
 
-function scoreWater(p) {
+function scoreWater(p, sanctuary = new Set()) {
   const b = p.board, side = G.side;
   const isBlue = c => topType(c) === 'water';
   if (side === 'B') { // 岛屿:非水连通块 × 5
@@ -345,13 +364,14 @@ function scoreWater(p) {
     }
     return n * 5;
   }
-  // A/C/D 面:最长河流(连通块内最短路径的最长值);官方规则书:C/D 面"其他地貌遵循的规则与 A 面相同"
-
+  // A/C/D 面:最长河流(连通块内最短路径的最长值);保护区特殊堆叠不参与普通河流
+  const normal = {};
+  for (const k in b) if (!sanctuary.has(k)) normal[k] = b[k];
   let best = 0; const seen = new Set();
-  for (const k in b) {
-    if (!isBlue(b[k]) || seen.has(k)) continue;
-    const grp = flood(b, k, isBlue); grp.forEach(x => seen.add(x));
-    best = Math.max(best, riverDiameter(b, grp));
+  for (const k in normal) {
+    if (!isBlue(normal[k]) || seen.has(k)) continue;
+    const grp = flood(normal, k, isBlue); grp.forEach(x => seen.add(x));
+    best = Math.max(best, riverDiameter(normal, grp));
   }
   if (best < 2) return 0;
   return best <= 6 ? RIVER_PTS[best] : RIVER_PTS[6] + (best - 6) * 4;

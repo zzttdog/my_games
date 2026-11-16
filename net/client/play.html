@@ -391,7 +391,7 @@
   var PEER = 'p' + Math.random().toString(36).slice(2, 10);
   /* 前端脚本缓存版本：改动 bridge.js / save.js / 游戏脚本后统一 bump。
      bridge.js、PeerJS 用版本化 URL + force-cache，避免每次进房间都重新下载。 */
-  var CACHE_V = '20261116d';
+  var CACHE_V = '20261116e';
   var MG = (window.MG_GAMES && window.MG_GAMES.games) || {};
   var GKEYS = Object.keys(MG).sort(function (a, b) { return (MG[a].order || 0) - (MG[b].order || 0); });
   if (!GKEYS.length) GKEYS = ['harmonies', 'castle'];
