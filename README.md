@@ -158,7 +158,8 @@ python net/tools/read-online-save.py --game harmonies --room 9999 --history
 
 ## 静态资源缓存（2026-11-16）
 
-- 图片是 `public, max-age=86400`；游戏脚本 / 样式 / 联机桥 / PeerJS 使用 `?v=20261116c` 版本地址，服务端对“带版本参数的 JS/CSS”返回 `public, max-age=31536000, immutable`。
+- 本地 Node 静态服务：图片是 `public, max-age=86400`；游戏脚本 / 样式 / 联机桥 / PeerJS 使用 `?v=20261116c` 版本地址，带版本参数的 JS/CSS 返回 `public, max-age=31536000, immutable`；HTML 保持 `no-cache`。
+- GitHub Pages 不能自定义缓存头，GitHub 自身固定约 `max-age=600`；版本号仍保证更新后不会继续用旧脚本，缓存命中时传输量仍是 0 或 304。
 - 联机页不再用 `fetch(..., { cache: 'no-store' })` 拉 `bridge.js` 和 `peerjs.min.js`，改为版本地址 + `force-cache`；刷新大厅和进入房间都不会重新下载这两个脚本。
 - 游戏页首屏预热过一次并完整完成后，会在 `localStorage` 记一个 `mygames.preload.warm.<game>`，之后不再弹全屏“正在载入游戏资源”遮罩；图片仍由游戏自身的 `<img>` 从浏览器缓存读取。
 - **改前端文件时统一 bump 版本号**：`net/client/play.html` 的 `CACHE_V`、两个游戏 `index.html` 里的 `?v=`、以及 `save.js?v=` 必须一起改，否则浏览器会继续用旧缓存。
