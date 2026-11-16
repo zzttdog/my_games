@@ -322,12 +322,13 @@ function renderStats() {
   document.getElementById('firstN').textContent = hasP ? (G.players[G.first].isAI ? G.players[G.first].name : '你') : '-';
   document.getElementById('modN').textContent =
     ['Pulse', G.mods.spirit && '自然之灵', G.mods.cres && 'Crescendo(精灵)', G.mods.sanct && '保护区'].filter(Boolean).join(' · ');
-  // 各玩家:地形分 + 动物分 = 总分;先手标注
+  // 各玩家:地形 / 动物 / 自然之灵 / 精灵 / 保护区分开显示
   for (let i = 0; i < G.n; i++) {
     const s = scoreBoard(G.players[i]);
     const terrPts = s.tree + s.mountain + s.field + s.building + s.water;
     document.getElementById('terr' + i).textContent = terrPts;
-    document.getElementById('ani' + i).textContent = s.animal + (s.spirit || 0);
+    document.getElementById('ani' + i).textContent = s.animal || 0;
+    document.getElementById('spi' + i).textContent = s.spirit || 0;
     document.getElementById('elf' + i).textContent = s.elf || 0;
     document.getElementById('sanctPts' + i).textContent = s.sanctPts || 0;
     document.getElementById('pts' + i).textContent = s.total;

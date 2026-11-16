@@ -96,7 +96,7 @@ function buildBoards() {
     col.className = 'col';
     col.innerHTML = `
       <div class="board-card">
-        <div class="board-title">${p.name}<span class="firstTag" id="firstTag${i}"></span> · 地形 <span class="pts" id="terr${i}">0</span> + 动物 <span class="pts" id="ani${i}">0</span> + 精灵 <span class="pts" id="elf${i}">0</span> + 保护区 <span class="pts" id="sanctPts${i}">0</span> = <span class="pts" id="pts${i}">0</span></div>
+        <div class="board-title">${p.name}<span class="firstTag" id="firstTag${i}"></span> · 地形 <span class="pts" id="terr${i}">0</span> + 动物 <span class="pts" id="ani${i}">0</span> + 自然之灵 <span class="pts" id="spi${i}">0</span> + 精灵 <span class="pts" id="elf${i}">0</span> + 保护区 <span class="pts" id="sanctPts${i}">0</span> = <span class="pts" id="pts${i}">0</span></div>
         <div class="card">
           <h3>${p.name}的卡牌(<span id="cardN${i}">0</span>/4)${i === 0 ? ' · 点击卡片进入放方块模式' : ''}</h3>
           <div class="card-row" id="cards${i}"></div>

@@ -251,9 +251,10 @@ function scoreBoard(p) {
   }
   // 水:按版面
   water = scoreWater(p);
-  // 动物卡(自然之灵:cubes=[0],完成图案后按专属规则计分,单列 spirit 便于结算明细)
+  // 动物卡：只计真正的动物卡；精灵牌 / 自然之灵卡有自己的计分分支，
+  // 不能把它们卡上的 2/5 分混进 animal。
   for (const ci of p.cards) if (ci.placed > 0) {
-    animal += ci.def.cubes[ci.placed - 1];
+    if (!ci.def.elf && !ci.def.spirit) animal += ci.def.cubes[ci.placed - 1];
     if (ci.def.spirit) {
       const pos = ci.def.spirit === 'adj2' ? Object.keys(b).find(k => b[k].cube && b[k].cube.card === ci.def.name) : null;
       spirit += spiritScore(ci.def.spirit, b, pos);
@@ -291,11 +292,14 @@ function flood(board, start, pred) {
 function spiritScore(kind, b, pos) {
   const cells = Object.values(b);
   const stackCount = (top, hs) => cells.filter(c => topType(c) === top && hs.includes(c.stack.length)).length;
-  const groupSizes = pred => { // 各连通块的大小
+  const waterTokens = c => c.stack.filter(t => t === 'water').length;
+  const groupSizes = (pred, weight) => { // 各连通块的大小；weight 可按“枚数”而不是格数计
     const seen = new Set(), sizes = [];
     for (const k in b) {
       if (seen.has(k) || !pred(b[k])) continue;
-      const grp = flood(b, k, pred); grp.forEach(g => seen.add(g)); sizes.push(grp.length);
+      const grp = flood(b, k, pred); grp.forEach(g => seen.add(g));
+      const size = weight ? grp.reduce((s, g) => s + weight(b[g]), 0) : grp.length;
+      sizes.push(size);
     }
     return sizes;
   };
@@ -309,8 +313,8 @@ function spiritScore(kind, b, pos) {
     case 'b6':   return groupSizes(isB).filter(n => n >= 2).length * 6;
     case 'm423': return stackCount('mountain', [2, 3]) * 4;
     case 'm321': return stackCount('mountain', [1, 2]) * 3 + stackCount('mountain', [3]);
-    case 'w7':   return groupSizes(isW).filter(n => n >= 2).length * 7;
-    case 'w2':   return cells.filter(isW).length * 2;
+    case 'w7':   return groupSizes(isW, waterTokens).filter(n => n >= 2).length * 7;
+    case 'w2':   return cells.filter(isW).reduce((s, c) => s + waterTokens(c), 0) * 2;
     case 'adj2': { // 霸王龙:灵方块邻接或经动物方块连通的每个动物方块 +2
       if (!pos || !b[pos]) return 0;
       const seen = new Set([pos]), q = [pos]; let n = 0;
