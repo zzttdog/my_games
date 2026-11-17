@@ -192,7 +192,7 @@ const BOARD_SHAPES = {
        holes: ['3,-1'],
        cofs: { 0: 0, 1: 0, 2: 1, 3: 1, 4: 2, 5: 2, 6: 3 },
        grid: { x0: 79.3, dx: 51.8, y0: 182.3, dy: 59.0 },
-       bg: { key: 'boardC', s: 0.5542, ty: 31.6 } },
+       bg: { key: 'boardC', s: 0.4063, ty: 36.8 } },
   D: { cols: { 0: [0, 1], 1: [-1, 1], 2: [-1, 1], 3: [-2, 1], 4: [-2, 0], 5: [-3, 0], 6: [-4, -1], 7: [-4, -3] },
        // 干旱格 = 照片中偏深色的格(共 18 格)
        dry: ['1,0',
@@ -201,7 +201,7 @@ const BOARD_SHAPES = {
              '6,-3', '6,-2', '6,-1'],
        cofs: { 0: 0, 1: 0, 2: 1, 3: 1, 4: 2, 5: 2, 6: 3, 7: 3 },
        grid: { x0: 56.9, dx: 55.3, y0: 169.3, dy: 63.8 },
-       bg: { key: 'boardD', s: 0.6188, ty: 17.0 } },
+       bg: { key: 'boardD', s: 0.4335, ty: 21.8 } },
 };
 function boardCells(side) {
   const s = BOARD_SHAPES[side] || BOARD_SHAPES.A;

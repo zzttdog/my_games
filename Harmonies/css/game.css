@@ -217,8 +217,23 @@
   #aidPreview .acard .aimg{width:100%;object-fit:contain;background:#0d0f13;border-radius:5px}
   .setup-opts{flex:1;min-width:0}
   @media(max-width:700px){
-    .setup-cols{flex-direction:column}
+    .setup-cols{flex-direction:column;gap:10px}
     .setup-aid{width:100%}
+    .setup-aid .aid-label{font-size:.72rem}
+    .setup-aid .aid-sub{display:none}
+    #aidPreview{gap:6px;align-items:flex-start}
+    #aidPreview .acard{flex:0 0 128px;width:128px;padding:5px 4px}
+    #aidPreview .acard .nm{font-size:.66rem}
+    .opt-group{margin-bottom:10px}
+    .opt-group>label{font-size:.72rem;margin-bottom:4px}
+    .opt-row{gap:6px}
+    .opt{padding:5px 9px;font-size:.75rem}
+    .opt .tag{font-size:.55rem}
+    .check-row{padding:4px 0;font-size:.78rem;gap:7px}
+    .check-row input{width:15px;height:15px}
+    #setupOv .modal h2{font-size:1rem;letter-spacing:1px}
+    #setupOv .modal .sub{font-size:.68rem;line-height:1.4;margin-bottom:10px}
+    #btnStart{min-height:40px;padding:10px;font-size:.85rem}
   }
   table.score{width:100%;border-collapse:collapse;font-size:.8rem;margin:10px 0}
   table.score td,table.score th{padding:5px 8px;border-bottom:1px solid #333a44;text-align:right}
@@ -381,7 +396,7 @@
     .board-card .card .acard{flex-basis:76px}
     .log{height:130px}
     .setup-aid{width:100%}
-    #aidPreview .acard{width:132px}
+    #aidPreview .acard{flex:0 0 112px;width:112px}
   }
 
   /* 顶部两行的等比缩小档位：市场卡宽 ≈ (视口 - 54) / 5，除以桌面卡宽 144 就是比例。
@@ -396,11 +411,13 @@
     .hand .tok{width:40px;height:40px}
     .row2{flex-direction:column}
     .row2 .btn{width:100%}
-    .opt{padding:7px 9px;font-size:.76rem}
-    .check-row{font-size:.78rem;align-items:flex-start}
+    .opt{padding:5px 6px;font-size:.72rem;min-height:32px}
+    .opt .tag{font-size:.5rem}
+    .check-row{padding:3px 0;font-size:.76rem;align-items:flex-start}
     .check-row input{margin-top:2px}
+    #aidPreview .acard{flex:0 0 112px;width:112px}
     #cardZoom{width:calc(100vw - 20px)}
-    .modal{padding:14px 12px}
+    .modal{padding:12px 10px}
   }
 
   /* ---------- 档 5：≤360px —— 顶部两行再收一档 ---------- */
