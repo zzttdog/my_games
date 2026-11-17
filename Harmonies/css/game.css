@@ -491,12 +491,12 @@
       flex-direction:row;
       justify-content:center;
     }
-    .side-row>.pub-supply #supply .tok{width:24px;height:24px}
+    .side-row>.pub-supply #supply .tok{width:32px;height:32px}
     .side-row>.pub-supply #supply .supply-group.empty span{font-size:.55rem;padding:0}
   }
   @media (max-width:420px){
-    .side-row>.pub-supply #supply .tok{width:22px;height:22px}
+    .side-row>.pub-supply #supply .tok{width:30px;height:30px}
   }
   @media (max-width:360px){
-    .side-row>.pub-supply #supply .tok{width:20px;height:20px}
+    .side-row>.pub-supply #supply .tok{width:28px;height:28px}
   }
