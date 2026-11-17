@@ -101,7 +101,7 @@ function buildBoards() {
           <h3>${p.name}的卡牌(<span id="cardN${i}">0</span>/4)${i === 0 ? ' · 点击卡片进入放方块模式' : ''}</h3>
           <div class="card-row" id="cards${i}"></div>
         </div>
-        <canvas id="cv${i}" width="${cw}" height="440" class="${i === 0 ? 'mine' : ''}"></canvas>
+        <canvas id="cv${i}" width="${cw}" height="440" class="${i === 0 ? 'mine' : ''} side-${G.side}"></canvas>
         <div class="ai-thinking" id="think${i}"></div>
         <div class="card" style="display:none">
           <h3>${p.name}的已完成卡牌</h3>
