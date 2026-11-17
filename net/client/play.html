@@ -41,15 +41,13 @@
 
   /* ── 大厅 ── */
   #home { max-width:700px; margin:auto; padding:44px 22px 70px; }
-  #home h1 { font-size:26px; font-weight:600; margin:0 0 8px; }
-  .lead { color:var(--muted); font-size:13px; line-height:1.9; margin:0 0 26px; }
+  #home h1 { font-size:26px; font-weight:600; margin:0 0 26px; }
   .field { margin-bottom:20px; }
   .field > label.f { display:block; font-size:12px; color:var(--muted); margin-bottom:9px; letter-spacing:1px; }
   .twocol { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
   @media (max-width:620px) { .twocol { grid-template-columns:1fr; } }
   .box { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px; }
-  .box h3 { margin:0 0 4px; font-size:14px; font-weight:600; }
-  .box .d { color:var(--muted); font-size:11px; line-height:1.8; margin:0 0 14px; }
+  .box h3 { margin:0 0 14px; font-size:14px; font-weight:600; }
   .code { font:600 30px/1.2 Consolas,Monaco,monospace; letter-spacing:8px; color:var(--gold);
           background:#121a24; border:1px dashed #4a3d28; border-radius:9px;
           padding:10px 14px; text-align:center; margin-bottom:12px; }
@@ -67,8 +65,7 @@
   .panels { display:grid; grid-template-columns:1fr 1.35fr; gap:16px; }
   @media (max-width:760px) { .panels { grid-template-columns:1fr; } }
   .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px; }
-  .panel h3 { font-size:13px; margin:0 0 3px; font-weight:600; }
-  .panel .pdesc { font-size:11px; color:var(--muted); line-height:1.8; margin:0 0 16px; }
+  .panel h3 { font-size:13px; margin:0 0 16px; font-weight:600; }
   .badge { font-size:10px; border-radius:5px; padding:2px 7px; margin-left:8px; vertical-align:1px; }
   .badge.out { background:#22303f; color:var(--blue); }
   .badge.in { background:#2c2618; color:var(--gold); }
@@ -179,7 +176,6 @@
   @media (max-width:820px) {
     #home { padding:24px 14px 48px; }
     #home h1 { font-size:21px; }
-    .lead { font-size:12px; }
     .code { font-size:24px; letter-spacing:5px; }
     .btn { padding:12px 14px; font-size:13px; min-height:44px; }
     .txt { font-size:16px; }                /* 16px 可避免 iOS 聚焦时自动放大 */
@@ -220,10 +216,9 @@
 <!-- ══════════ 大厅 ══════════ -->
 <div id="home">
   <h1>联机对战大厅</h1>
-  <p class="lead">这里是 <b>玩家 vs 玩家</b> 的入口。房主创建 4 位数字房间并统一设定开局规则，其他玩家输入房间号加入；<b>人齐后由房主点开始</b>。两款游戏的原版单机入口在导航页。</p>
 
   <div class="field">
-    <label class="f">① 选择游戏</label>
+    <label class="f">游戏</label>
     <div class="seg" id="gameSeg">
       <button data-v="harmonies" class="on">Harmonies · 自然和弦</button>
       <button data-v="castle">The White Castle · 姬路城</button>
@@ -231,14 +226,13 @@
   </div>
 
   <div class="field">
-    <label class="f">② 我的昵称（游戏外信息，只用于房间显示）</label>
+    <label class="f">昵称</label>
     <input class="txt" id="nameInput" maxlength="12" autocomplete="off">
   </div>
 
   <div class="twocol">
     <div class="box">
       <h3>创建房间</h3>
-      <p class="d">你会成为房主（座位 0），并由你统一设定本局的游戏内规则。</p>
       <div class="code" id="createCode">0000</div>
       <div class="row">
         <button class="btn ghost" id="btnReroll">换一个</button>
@@ -247,7 +241,6 @@
     </div>
     <div class="box">
       <h3>加入房间</h3>
-      <p class="d">输入房主告诉你的 4 位数字房间号。座位按加入顺序自动分配。</p>
       <input class="txt" id="joinCode" inputmode="numeric" maxlength="4" placeholder="4 位数字" style="width:100%;margin-bottom:12px">
       <div class="row"><button class="btn gold" id="btnJoin" style="width:100%;text-align:center">加入房间 →</button></div>
     </div>
@@ -256,21 +249,12 @@
   <div class="warnbox" id="envWarn">正在检测联机环境…</div>
   <div id="peerOptBox" style="display:none;margin:12px 0;padding:10px 14px;border:1px solid #2a3543;border-radius:8px;background:#121a24;font-size:12px;color:#9fb0c4">
     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:#e8edf4">
-      <input type="checkbox" id="peerOpt"> 跨设备联机（PeerJS 测试）
+      <input type="checkbox" id="peerOpt"> 跨设备联机（PeerJS）
     </label>
-    <span style="display:block;margin-top:5px">勾选后房主和客机走 WebRTC 直连，不再经过 Node 的 <code>/room</code>；使用 PeerJS Cloud 信令，首次连接可能需要几秒。</span>
+    <span style="display:block;margin-top:5px">勾选后走 WebRTC 直连，首次连接可能需要几秒。</span>
   </div>
 
-  <div class="hint">
-    <b>联机测试步骤</b><br>
-    1. 一台点「创建房间」；进房后点<b>「复制邀请链接」</b>发给另一台设备，打开即可直达房间（推荐，不会丢访问凭证）。也可以让对方打开同一个站点、输入那个 <b>4 位数字</b> 点「加入房间」。<br>
-    2. 房主在「游戏内 · 开局规则」里设定 <b>真人玩家数</b> 和 <b>加几个 AI</b>（总席位 2~4）。这些设置会实时同步给所有玩家，其他人是只读的。<br>
-    3. 等所有真人座位显示「已就位」，房主点「开始对局」，各窗口才真正进入棋盘。<br>
-    4. 每个窗口只显示自己的棋盘，左下角角标会写明当前轮到谁、是不是轮到你。<br>
-    <span style="color:#e6c89a">AI 席位由<b>房主的窗口</b>统一代跑，其他窗口只接收同步，不会出现多份 AI 各走一步。</span>
-  </div>
-
-  <div style="margin-top:22px"><a class="btn ghost" id="btnSolo">← 返回单机（玩家 vs AI，原版设置页）</a></div>
+  <div style="margin-top:22px"><a class="btn ghost" id="btnSolo">← 返回单机</a></div>
 </div>
 
 <!-- ══════════ 房间等待 ══════════ -->
@@ -287,7 +271,7 @@
     </div>
 
     <div class="invite">
-      <div class="ilabel"><b>邀请其他玩家（推荐）</b>：把下面这条<b>完整链接</b>发给对方，打开就直接进入本房间，不用手输房间号，也不会误变成第二个房主。链接里带有站点访问凭证，请勿删改。</div>
+      <div class="ilabel"><b>邀请链接</b>：发给对方，打开即进本房间（链接带访问凭证，勿删改）。</div>
       <div class="row">
         <input class="txt" id="inviteUrl" readonly>
         <button class="btn gold" id="btnCopyInvite">复制邀请链接</button>
@@ -297,8 +281,7 @@
 
     <div class="panels">
       <div class="panel">
-        <h3>游戏外 · 房间设置<span class="badge out">只影响怎么连</span></h3>
-        <p class="pdesc">这些选项<b>不会写进游戏状态</b>，不参与规则、也不影响胜负。它们只决定谁连进哪个房间、叫什么名字。</p>
+        <h3>房间信息<span class="badge out">只影响怎么连</span></h3>
         <div class="kv"><span class="k">房间号</span><span class="v" id="kvRoom"></span></div>
         <div class="kv"><span class="k">游戏</span><span class="v" id="kvGame"></span></div>
         <div class="kv"><span class="k">联机通道</span><span class="v" id="kvTransport"></span></div>
@@ -308,19 +291,17 @@
           <span class="k" style="padding-top:9px">我的昵称</span>
           <span class="v"><input class="txt" id="nameInput2" maxlength="12" style="width:150px"></span>
         </div>
-        <div class="hint" style="margin-top:14px">昵称可随时改，只影响房间列表里的显示，不改动棋盘规则。</div>
       </div>
 
       <div class="panel">
-        <h3>游戏内 · 开局规则<span class="badge in">房主统一设定 · 全员一致</span></h3>
-        <p class="pdesc">这些选项会<b>直接写进游戏状态</b>（席位数、AI、先后手、版图、扩展、难度），由房主一人设定并广播给所有玩家，开局后锁定。所有窗口看到的完全相同。</p>
-        <div id="roNote" class="readonly-note" style="display:none">以下设置由房主决定，你这里是<b>只读</b>的。这样就不会出现两边人数 / 难度不一致。</div>
+        <h3>开局规则<span class="badge in">房主统一设定 · 全员一致</span></h3>
+        <div id="roNote" class="readonly-note" style="display:none">以下设置由房主决定，你这里是<b>只读</b>的。</div>
         <div id="settingsBody"></div>
       </div>
     </div>
 
     <div class="seatsbox">
-      <h3>本局座位表 <span style="font-size:11px;color:var(--muted);font-weight:400">真人坐前排，AI 由房主窗口代跑</span></h3>
+      <h3>本局座位表</h3>
       <div class="seatlist" id="seatList"></div>
       <div class="readybar">真人就位：<b id="readyText">0/2 已就位</b> <span id="readyHint"></span></div>
       <div class="ractions">
@@ -375,8 +356,8 @@
 </div>
 
 <script src="vendor/peerjs.min.js?v=1.5.4"></script>
-<script src="mobile-shell.js?v=20261116f"></script>
-<script src="games.js?v=20261116f"></script>
+<script src="mobile-shell.js?v=20261117a"></script>
+<script src="games.js?v=20261117a"></script>
 <script>
 (function () {
   'use strict';
@@ -391,7 +372,7 @@
   var PEER = 'p' + Math.random().toString(36).slice(2, 10);
   /* 前端脚本缓存版本：改动 bridge.js / save.js / 游戏脚本后统一 bump。
      bridge.js、PeerJS 用版本化 URL + force-cache，避免每次进房间都重新下载。 */
-  var CACHE_V = '20261116f';
+  var CACHE_V = '20261117a';
   var MG = (window.MG_GAMES && window.MG_GAMES.games) || {};
   var GKEYS = Object.keys(MG).sort(function (a, b) { return (MG[a].order || 0) - (MG[b].order || 0); });
   if (!GKEYS.length) GKEYS = ['harmonies', 'castle'];
