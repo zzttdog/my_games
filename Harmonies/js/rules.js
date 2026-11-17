@@ -250,7 +250,8 @@ function scoreBoard(p) {
         const c = b[key(nq, nr)];
         if (c && topType(c)) colors.add(topType(c));
       });
-      if (side === 'C') { if (colors.size >= 4 && colors.has('building')) building += 8; } // 官方:≥4 色含红→8
+      // C 面官方：相邻至少 4 种不同地形 → 8 分（红色只是可计数的一种，不强制相邻有红）
+      if (side === 'C') { if (colors.size >= 4) building += 8; }
       else if (colors.size >= 3) building += 5;
     }
   }
