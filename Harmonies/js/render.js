@@ -3,6 +3,9 @@
  * 渲染
  * ============================================================ */
 const HEX = 38, LAY = 9;
+/* B 面底图整体显示：按画布中心缩到 90% 并居中，避免上下/左右裁切。
+   格子绘制与点击检测同步用这一变换，保证不脱格。 */
+const BOARD_VIEW = { B: { k: 0.90, dx: -13.7, dy: 54.8 } };
 // 平顶六边形坐标:列内序号按各面版图的 rmin 归一,奇数列下移半格
 function hexPx(q, r) {
   const s = BOARD_SHAPES[G.side] || BOARD_SHAPES.A;
@@ -30,13 +33,27 @@ function renderBoard(idx) {
   const bgKey = { A: 'boardA', B: 'boardB', C: 'boardC', D: 'boardD' }[G.side];
   const bg = bgKey ? boardImgs[bgKey] : null;
   if (bg) {
-    if (G.side === 'A') ctx.setTransform(0.2330, 0.0020, 0.0011, 0.2441, -28.4, -22.3);
-    else if (G.side === 'B') ctx.setTransform(0.2282, 0.0000, 0.0002, 0.2317, -4.6, -45.9);
-    if (G.side === 'A' || G.side === 'B') { ctx.drawImage(bg, 0, 0); ctx.setTransform(1, 0, 0, 1, 0, 0); }
-    else {
+    if (G.side === 'A') {
+      ctx.setTransform(0.2330, 0.0020, 0.0011, 0.2441, -28.4, -22.3);
+      ctx.drawImage(bg, 0, 0);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    } else if (G.side === 'B') {
+      const v = BOARD_VIEW.B, cx = cv.width / 2, cy = cv.height / 2;
+      // 底图矩阵先组合视图缩放，再把整张图居中放进画布
+      ctx.setTransform(v.k * 0.2282, v.k * 0.0000,
+        v.k * 0.0002, v.k * 0.2317,
+        v.k * (-4.6 - cx) + cx + v.dx,
+        v.k * (-45.9 - cy) + cy + v.dy);
+      ctx.drawImage(bg, 0, 0);
+      // 之后所有格子统一按视图变换绘制
+      ctx.setTransform(v.k, 0, 0, v.k, cx + v.dx - v.k * cx, cy + v.dy - v.k * cy);
+    } else {
       const b = BOARD_SHAPES[G.side].bg;
       ctx.drawImage(bg, 0, b.ty, bg.naturalWidth * b.s, bg.naturalHeight * b.s);
     }
+  } else if (G.side === 'B') {
+    const v = BOARD_VIEW.B, cx = cv.width / 2, cy = cv.height / 2;
+    ctx.setTransform(v.k, 0, 0, v.k, cx + v.dx - v.k * cx, cy + v.dy - v.k * cy);
   }
   const cubeHighlights = (idx === 0 && G.cubeMode) ? new Set(G.cubeMode.matches.map(m => m.anchor)) : null;
   for (const k in p.board) {
@@ -114,6 +131,7 @@ function renderBoard(idx) {
       ctx.strokeStyle = '#d4a853'; ctx.lineWidth = 2.5; ctx.stroke();
     }
   }
+  if (G.side === 'B') ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
 function tokEl(type, cls = '') {

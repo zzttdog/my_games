@@ -45,11 +45,18 @@ function onBoardClick(e) {
   const cv = e.currentTarget, rect = cv.getBoundingClientRect();
   const sx = cv.width / rect.width, sy = cv.height / rect.height;
   const mx = (e.clientX - rect.left) * sx, my = (e.clientY - rect.top) * sy;
+  // B 面整体缩放后，点击坐标先反算回未缩放坐标，再按 HEX 命中
+  const view = (typeof BOARD_VIEW !== 'undefined') ? BOARD_VIEW[G.side] : null;
+  let hx = mx, hy = my;
+  if (view) {
+    hx = cv.width / 2 + (mx - cv.width / 2 - view.dx) / view.k;
+    hy = cv.height / 2 + (my - cv.height / 2 - view.dy) / view.k;
+  }
   let best = null, bd = Infinity;
   for (const k in p.board) {
     const [q, r] = k.split(',').map(Number);
     const { x, y } = hexPx(q, r);
-    const d = Math.hypot(mx - x, my - y);
+    const d = Math.hypot(hx - x, hy - y);
     if (d < HEX && d < bd) { bd = d; best = k; }
   }
   if (!best) return;
