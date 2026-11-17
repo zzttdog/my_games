@@ -124,6 +124,17 @@ const AID_CARDS = {
   C: 'Images/aid/score_side_C.jpg',
   D: 'Images/aid/score_side_D.jpg',
 };
+// 版图缩略图:与提示卡并排显示,方便选面时直接看形状
+const BOARD_IMG = {
+  A: 'Images/res/board_A.jpg',
+  B: 'Images/res/board_B.jpg',
+  C: 'Images/res/board_C.png',
+  D: 'Images/res/board_D.png',
+};
+function boardThumbSrc(side) {
+  const im = boardImgs['board' + side];
+  return im && im.src ? im.src : webpSrc(BOARD_IMG[side] || BOARD_IMG.A);
+}
 function renderAidPreview() {
   const el = document.getElementById('aidPreview');
   if (!el) return;
@@ -135,6 +146,11 @@ function renderAidPreview() {
   if (img) d.innerHTML = `<img class="aimg" src="${img}" alt="${side}面提示卡" draggable="false" onerror="MGImg.fallback(this)"><div class="nm">${side}面计分</div>`;
   else d.innerHTML = `<div class="aid-ph">${side}面提示卡<br>待补图</div>`;
   el.appendChild(d);
+
+  const b = document.createElement('div');
+  b.className = 'acard aid map-thumb';
+  b.innerHTML = `<img class="aimg" src="${boardThumbSrc(side)}" alt="${side}面版图" draggable="false" onerror="MGImg.fallback(this)"><div class="nm">${side}面版图</div>`;
+  el.appendChild(b);
 }
 renderAidPreview();
 

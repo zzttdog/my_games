@@ -209,10 +209,11 @@
   /* 开局设置:左提示卡 + 右选项 两栏布局 */
   #setupOv .modal{max-width:780px}
   .setup-cols{display:flex;gap:22px;align-items:flex-start}
-  .setup-aid{flex:none;width:170px}
+  .setup-aid{flex:none;width:300px}
   .setup-aid .aid-label{font-size:.78rem;color:var(--muted);display:block;margin-bottom:2px}
   .setup-aid .aid-sub{font-size:.62rem;color:var(--muted);opacity:.85;margin-bottom:8px}
-  #aidPreview .acard{width:150px;flex:none}
+  #aidPreview{display:flex;gap:8px}
+  #aidPreview .acard{width:auto;flex:1 1 0;min-width:0}
   #aidPreview .acard .aimg{width:100%;object-fit:contain;background:#0d0f13;border-radius:5px}
   .setup-opts{flex:1;min-width:0}
   @media(max-width:700px){

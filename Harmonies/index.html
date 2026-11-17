@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>自然和弦 · Harmonies 电子版</title>
-<link rel="stylesheet" href="css/game.css?v=20261117b">
+<link rel="stylesheet" href="css/game.css?v=20261117c">
 <!-- 开局资源预加载：放在 <head> 里，遮罩早于任何卡图请求出现；清单由 net/tools/gen-imglist.py 生成 -->
-<script src="../net/client/games.js?v=20261117b"></script>
-<script src="../net/client/img-list.js?v=20261117b"></script>
-<script src="../net/client/preload.js?v=20261117b"></script>
+<script src="../net/client/games.js?v=20261117c"></script>
+<script src="../net/client/img-list.js?v=20261117c"></script>
+<script src="../net/client/preload.js?v=20261117c"></script>
 </head>
 <body>
 <h1>自然和弦 · Harmonies</h1>
@@ -101,18 +101,18 @@
         <div class="opt-group">
           <label>个人版图(A/B 基础规则;C/D 为 Crescendo 官方新版图)</label>
           <div class="opt-row" id="sideOpts">
-            <button class="opt on" data-v="A">A 面<span class="tag">最长河流</span></button>
-            <button class="opt" data-v="B">B 面<span class="tag">岛屿分割</span></button>
+            <button class="opt on" data-v="A">A 面<span class="tag">最长河流·23格</span></button>
+            <button class="opt" data-v="B">B 面<span class="tag">岛屿分割·25格</span></button>
             <button class="opt" data-v="C" id="sideC">C 面<span class="tag">中央空穴·26格</span></button>
             <button class="opt" data-v="D" id="sideD">D 面<span class="tag">干旱格·25格</span></button>
           </div>
         </div>
         <div class="opt-group">
           <label>扩展模组(可任意组合)</label>
-          <label class="check-row"><input type="checkbox" id="modSpirit"> 自然之灵:开局 2 选 1 的强力个人目标卡(占 4 卡上限)</label>
-          <label class="check-row"><input type="checkbox" id="modPulse" checked> Pulse 扩展:10张新的动物卡(其图案可镜像放置)</label>
-          <label class="check-row"><input type="checkbox" id="modCres"> Crescendo 扩展:精灵卡(10 张混入牌库,紫色方块与动物同格 5 分/单独 2 分,不能与自然之灵同格) </label>
-          <label class="check-row"><input type="checkbox" id="modSanct">Crescendo 扩展:保护区牌 独立可选行动(可与动物卡同回合各拿 1 张,共享 4 张上限);持有板块可在一个格子突破一般堆叠规则,完成后相邻同色标记每格 +3 分</label>
+          <label class="check-row"><input type="checkbox" id="modSpirit"> 自然之灵 11 张</label>
+          <label class="check-row"><input type="checkbox" id="modPulse" checked> Pulse 动物卡 10 张</label>
+          <label class="check-row"><input type="checkbox" id="modCres"> 精灵卡 10 张</label>
+          <label class="check-row"><input type="checkbox" id="modSanct"> 保护区牌 10 张</label>
         </div>
         <div class="opt-group">
           <label>玩家人数(其余席位由 AI 接管,按顺序轮转行动)</label>
@@ -160,14 +160,14 @@
 </div>
 <button class="btn warn hidden" id="btnEndFloat" style="position:fixed;right:16px;bottom:16px;z-index:90;width:auto;padding:10px 18px">结算 / 重新开始</button>
 
-<script src="js/data.js?v=20261117b"></script>
-<script src="js/game.js?v=20261117b"></script>
-<script src="js/rules.js?v=20261117b"></script>
-<script src="js/render.js?v=20261117b"></script>
-<script src="js/ui.js?v=20261117b"></script>
-<script src="js/ai.js?v=20261117b"></script>
-<script src="js/main.js?v=20261117b"></script>
+<script src="js/data.js?v=20261117c"></script>
+<script src="js/game.js?v=20261117c"></script>
+<script src="js/rules.js?v=20261117c"></script>
+<script src="js/render.js?v=20261117c"></script>
+<script src="js/ui.js?v=20261117c"></script>
+<script src="js/ai.js?v=20261117c"></script>
+<script src="js/main.js?v=20261117c"></script>
 <!-- 本地存档：放在所有游戏脚本之后，单机与联机(iframe)共用；联机客机会自行禁用 -->
-<script src="../net/client/save.js?v=20261117b"></script>
+<script src="../net/client/save.js?v=20261117c"></script>
 </body>
 </html>
