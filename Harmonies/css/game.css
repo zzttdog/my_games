@@ -32,9 +32,6 @@
     border-radius:6px;padding:1px 5px;margin-left:6px;vertical-align:middle}
   canvas{display:block;border-radius:8px;background:#12151a;max-width:100%;height:auto}
   canvas.mine{cursor:pointer}
-  /* C/D 新版图整体略缩,四块棋盘显示宽度差控制在 8% 内 */
-  canvas.side-C{width:96%;margin:0 auto}
-  canvas.side-D{width:92%;margin:0 auto}
   /* 供应区(横排在版图上方) */
   .public-row{display:flex;gap:12px;align-items:stretch}
   .public-row .card{margin:0;display:flex;flex-direction:column}

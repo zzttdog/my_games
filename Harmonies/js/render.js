@@ -3,9 +3,17 @@
  * 渲染
  * ============================================================ */
 const HEX = 38, LAY = 9;
-/* B 面底图整体显示：按画布中心缩到 90% 并居中，避免上下/左右裁切。
+/* A/B 官方版图的固定仿射矩阵（底图像素 → 画布） */
+const BOARD_MATRIX = {
+  A: { a: 0.2330, b: 0.0020, c: 0.0011, d: 0.2441, e: -28.4, f: -22.3 },
+  B: { a: 0.2282, b: 0.0000, c: 0.0002, d: 0.2317, e: -4.6, f: -45.9 },
+};
+/* A/B 底图整体显示：围绕画布中心缩放到刚好铺满画布，避免裁边与上下黑边。
    格子绘制与点击检测同步用这一变换，保证不脱格。 */
-const BOARD_VIEW = { B: { k: 0.918, dx: -14.0, dy: 56.0 } };
+const BOARD_VIEW = {
+  A: { k: 0.900, dx: 2.9, dy: 1.2 },
+  B: { k: 0.918, dx: -14.0, dy: 27.5 },
+};
 // 平顶六边形坐标:列内序号按各面版图的 rmin 归一,奇数列下移半格
 function hexPx(q, r) {
   const s = BOARD_SHAPES[G.side] || BOARD_SHAPES.A;
@@ -32,28 +40,25 @@ function renderBoard(idx) {
   // 官方版图照片作底图:A/B 用仿射变换对齐;C/D 按等比缩放贴合格心坐标
   const bgKey = { A: 'boardA', B: 'boardB', C: 'boardC', D: 'boardD' }[G.side];
   const bg = bgKey ? boardImgs[bgKey] : null;
+  const view = BOARD_VIEW[G.side] || null;
   if (bg) {
-    if (G.side === 'A') {
-      ctx.setTransform(0.2330, 0.0020, 0.0011, 0.2441, -28.4, -22.3);
-      ctx.drawImage(bg, 0, 0);
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-    } else if (G.side === 'B') {
-      const v = BOARD_VIEW.B, cx = cv.width / 2, cy = cv.height / 2;
-      // 底图矩阵先组合视图缩放，再把整张图居中放进画布
-      ctx.setTransform(v.k * 0.2282, v.k * 0.0000,
-        v.k * 0.0002, v.k * 0.2317,
-        v.k * (-4.6 - cx) + cx + v.dx,
-        v.k * (-45.9 - cy) + cy + v.dy);
+    if (view) {
+      const m = BOARD_MATRIX[G.side], cx = cv.width / 2, cy = cv.height / 2;
+      // 底图矩阵先组合视图缩放，再把整张图铺满画布
+      ctx.setTransform(view.k * m.a, view.k * m.b,
+        view.k * m.c, view.k * m.d,
+        view.k * (m.e - cx) + cx + view.dx,
+        view.k * (m.f - cy) + cy + view.dy);
       ctx.drawImage(bg, 0, 0);
       // 之后所有格子统一按视图变换绘制
-      ctx.setTransform(v.k, 0, 0, v.k, cx + v.dx - v.k * cx, cy + v.dy - v.k * cy);
+      ctx.setTransform(view.k, 0, 0, view.k, cx + view.dx - view.k * cx, cy + view.dy - view.k * cy);
     } else {
       const b = BOARD_SHAPES[G.side].bg;
       ctx.drawImage(bg, 0, b.ty, bg.naturalWidth * b.s, bg.naturalHeight * b.s);
     }
-  } else if (G.side === 'B') {
-    const v = BOARD_VIEW.B, cx = cv.width / 2, cy = cv.height / 2;
-    ctx.setTransform(v.k, 0, 0, v.k, cx + v.dx - v.k * cx, cy + v.dy - v.k * cy);
+  } else if (view) {
+    const cx = cv.width / 2, cy = cv.height / 2;
+    ctx.setTransform(view.k, 0, 0, view.k, cx + view.dx - view.k * cx, cy + view.dy - view.k * cy);
   }
   const cubeHighlights = (idx === 0 && G.cubeMode) ? new Set(G.cubeMode.matches.map(m => m.anchor)) : null;
   for (const k in p.board) {
@@ -131,7 +136,7 @@ function renderBoard(idx) {
       ctx.strokeStyle = '#d4a853'; ctx.lineWidth = 2.5; ctx.stroke();
     }
   }
-  if (G.side === 'B') ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (BOARD_VIEW[G.side]) ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
 function tokEl(type, cls = '') {
