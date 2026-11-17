@@ -92,7 +92,7 @@ const PULSE_CARDS = [
   { name:'变色龙', icon:'🦎', cubes:[4,8,15], pat:[{q:0,r:0,req:'w'},{q:0,r:-1,req:'T1',a:1},{q:-1,r:-1,req:'f'}] },
   { name:'牦牛',   icon:'🐂', cubes:[7,16],   pat:[{q:0,r:0,req:'w'},{q:-1,r:0,req:'M2',a:1},{q:-2,r:0,req:'f'}] },
   { name:'知更鸟', icon:'🐦', cubes:[4,10,17],pat:[{q:0,r:0,req:'T2'},{q:-1,r:0,req:'B',a:1},{q:-1,r:1,req:'M1'}] },
-  { name:'食人鱼', icon:'🐟', cubes:[6,13],   pat:[{q:0,r:0,req:'f'},{q:-1,r:0,req:'T3'},{q:-1,r:1,req:'w',a:1}] },
+  { name:'食人鱼', icon:'🐟', cubes:[6,13],   pat:[{q:0,r:0,req:'w',a:1},{q:0,r:1,req:'T3'},{q:1,r:1,req:'f'}] },
   { name:'老虎',   icon:'�', cubes:[3,10,16],pat:[{q:0,r:0,req:'w'},{q:0,r:-1,req:'M1'},{q:-1,r:-1,req:'T1',a:1}] },
 ];
 

@@ -30,7 +30,16 @@ function pickSanct(p) {
       }
       if (n > adj) adj = n;
     }
-    const v = avail * 4 + Math.min(freeCells, 6) * 1.2 + adj * 2.5;
+    // 和当前动物卡需要的颜色重合越多,保护区越可能在之后帮助动物完成/计分。
+    let animalFit = 0;
+    for (const ci of p.cards) {
+      if (ci.done) continue;
+      for (const pc of ci.def.pat) {
+        const rc = reqColor(pc);
+        if (rc && def.colors.includes(rc)) animalFit += pc.a ? 2 : 1;
+      }
+    }
+    const v = avail * 4 + Math.min(freeCells, 6) * 1.2 + adj * 2.5 + animalFit * 1.4;
     if (v > bv) { bv = v; best = i; }
   });
   return best;
@@ -42,7 +51,7 @@ async function aiTurn() {
   await wait(500);
   // 0. 保护区:只同时持有一张未完成的,且给动物卡留出卡位
   const undoneSanct = (p.sancts || []).filter(s => !s.done).length;
-  const sanctLimit = G.side === 'A' ? AI_TUNE.sanctSlotA : AI_TUNE.sanctSlotOther;
+  const sanctLimit = sideTune().sanctSlot;
   if (G.mods.sanct && !G.tookSanct && activeCardCount(p) < sanctLimit && undoneSanct < 1
       && G.sanctOffer.length && G.round >= 2) {
     const si = pickSanct(p);
@@ -87,8 +96,11 @@ async function aiTurn() {
   let bestGi = -1, bestPlan = null, bestVal = -1e9;
   for (let gi = 0; gi < 5; gi++) {
     if (!G.supply[gi].length) continue;
-    const plan = planPlacements(p, G.supply[gi]);
-    if (plan.val > bestVal) { bestVal = plan.val; bestGi = gi; bestPlan = plan; }
+    const plan = planPlacements(p, G.supply[gi], { allOrders: sideTune().allOrders });
+    let val = plan.val;
+    // 只有自己这组实在没什么收益时才考虑抢组;正常局面仍以自己动物/地形为主。
+    if (AI_TUNE.deny > 0 && plan.val < 4) val += AI_TUNE.deny * opponentGroupValue(gi, meIdx);
+    if (val > bestVal) { bestVal = val; bestGi = gi; bestPlan = plan; }
   }
   if (!bestPlan) { // 供应区全空(结束已触发):直接结束
     aiLog(meIdx, ''); G.tookCard = false; endTurn(); return;
@@ -181,8 +193,10 @@ window.AI_TUNE = {
   stackBonus: 3,       // 放在已有标记上的额外奖励(叠高、省空格);过高会让 AI 只堆不铺图案
   lateEmptyK: 1,       // 空格快用完时放大「占用新空格」的代价,越晚越倾向堆叠续命
   cubeGain: 1.0,       // 下一枚方块的卡面分增量权重(第二/第三枚高分方块要看得见)
-  sanctSlotA: 3,       // A 面只有 23 格,保护区最多拿 3 个,给动物卡留位
-  sanctSlotOther: 4    // B/C/D 面空间更大,允许 4 个
+  center: 1.8,         // 版图重心偏好:避免总从左/上边缘起手,给图案留更多邻接方向
+  frontier: 0.9,       // 向已有地形/标记邻接的偏好:减少孤立空格,提高动物卡联动
+  sanctCenter: 6.0,    // 保护区首层向中心靠的权重;避免保护区贴边、完成时邻接计分少
+  deny: 0.10,          // 仅当自己这组收益很低时,才轻度抢对手需要的组
 };
 /* 图案进度的价值是「非线性」的:把最后 1 格补上(能立刻放方块拿分)远比
    到处开新坑值钱。线性权重会让 AI 每回合在不同位置各铺一格,结果每张卡都差一点,
@@ -218,7 +232,7 @@ function terrainPotential(board, k) {
 
 /* 保护区建造奖励:让 AI 从第一层起就在同一格按板块 4 层颜色堆叠。
    旧版完全没有这一项,所以 AI 拿了保护区也永远不会去建 —— 实测完成率 0%。 */
-function sanctBuildBonus(p, clone, k, t) {
+function sanctBuildBonus(p, clone, k, t, geom) {
   const cell = clone[k];
   const h = cell.stack.length - 1;              // clone 里已含本次放入的 t,h = 放入前的层数
   if (h < 0 || h >= 4) return 0;
@@ -229,6 +243,9 @@ function sanctBuildBonus(p, clone, k, t) {
     for (let i = 0; i < h; i++) if (cell.stack[i] !== s.def.layers[i]) { ok = false; break; }
     if (!ok || s.def.layers[h] !== t) continue;
     bonus += (h === 3 ? AI_TUNE.sanctFinal : AI_TUNE.sanctBase + h * AI_TUNE.sanctStep); // 越接近完成越值钱
+    // 旧版保护区跟着第一个可用空格走,经常落在最左边。首层就往版图中心靠,
+    // 让完成后相邻 6 格有更多可计分地形;后续层已被 site 锁定,不会跑位。
+    if (geom) bonus += AI_TUNE.sanctCenter * centralPos(k, geom);
     if (h === 3) {                              // 完成后的相邻计分潜力
       const [q, r] = k.split(',').map(Number);
       for (const [nq, nr] of neighbors(q, r)) {
@@ -249,21 +266,86 @@ function cardCubeScore(ci, matches) {
   const placedAfter = Math.min(cubes.length, ci.placed + matches.length);
   return placedAfter > 0 ? cubes[placedAfter - 1] : 0;
 }
+/* 版图中心度:旧版用 |q|+|r|+|q+r| 做径向惩罚,原点在版图左上角,
+   实际效果是越靠左越“好”,所以 AI 永远从最左边开始铺。这里改成
+   以整张版图的像素重心为原点,给内部格加分。中心格周围可用的
+   邻居/图案方向更多,动物卡和水田连片都更容易接上。 */
+function boardGeom(board) {
+  let cx = 0, cy = 0, n = 0;
+  const pts = [];
+  for (const k in board) {
+    const [q, r] = k.split(',').map(Number);
+    const p = hexPx(q, r);
+    pts.push({ x: p.x, y: p.y });
+    cx += p.x; cy += p.y; n++;
+  }
+  cx /= (n || 1); cy /= (n || 1);
+  let maxD = 1;
+  for (const p of pts) {
+    const d = Math.hypot(p.x - cx, p.y - cy);
+    if (d > maxD) maxD = d;
+  }
+  return { cx, cy, maxD };
+}
+function centralPos(k, geom) {
+  if (!geom) return 0;
+  const [q, r] = k.split(',').map(Number);
+  const p = hexPx(q, r);
+  return 1 - Math.min(1, Math.hypot(p.x - geom.cx, p.y - geom.cy) / geom.maxD);
+}
+/* 不同版图的侧重点:小版图 A 优先动物/图案,大版图 D 优先地形;
+   中心度仍然保留,但 A 面空格少,不能让中心偏好把动物卡位挤掉。
+   三枚标记顺序搜索对所有版图开启;不同版图仅差权重/保护区上限。 */
+const SIDE_TUNE = {
+  A: { center: 2.2, frontier: 1.0, animal: 1.08, terrain: 1.00, building: 1.00, sanct: 0.90, sanctSlot: 3, allOrders: true },
+  B: { center: 1.8, frontier: 0.9, animal: 1.00, terrain: 1.00, building: 1.00, sanct: 1.00, sanctSlot: 4, allOrders: true },
+  C: { center: 1.7, frontier: 1.0, animal: 1.05, terrain: 1.15, building: 1.00, sanct: 0.95, sanctSlot: 3, allOrders: true },
+  D: { center: 1.9, frontier: 0.85, animal: 0.95, terrain: 1.15, building: 1.00, sanct: 1.00, sanctSlot: 4, allOrders: true },
+};
+function sideTune() { return SIDE_TUNE[G.side] || SIDE_TUNE.B; }
+/* 动态侧重点:快完成的动物卡优先,地形分落后时补地形,已有保护区/卡位紧时降低保护区。 */
+function dynamicFocus(p, t) {
+  const active = p.cards.filter(c => !c.done);
+  const near = active.filter(c => cardProgress(c.def, p.board, p) >= c.def.pat.length - 1).length;
+  const empty = Object.values(p.board).filter(c => !c.stack.length && !c.cube && !c.spirit).length;
+  const s = scoreBoard(p);
+  const terrainPts = s.tree + s.mountain + s.field + s.building + s.water;
+  let animal = t.animal * (1 + near * 0.05 + active.length * 0.02);
+  let terrain = t.terrain * (terrainPts < 30 ? 1.08 : 0.98) * (near >= 2 ? 0.97 : 1);
+  let sanct = t.sanct * (empty >= 10 ? 1 : 0.85);
+  if ((p.sancts || []).some(x => x.done)) sanct *= 0.90; // 已建成一个后不再无限追保护区
+  if (near >= 2) sanct *= 0.85;                          // 动物卡快完成时先补动物
+  return { animal, terrain, sanct, building: t.building || 1 };
+}
+/* 已有地形邻接数:让 AI 往已有版图/图案旁边发展,而不是在空白边缘各开一坑。 */
+function developedNeighbors(board, k) {
+  const [q, r] = k.split(',').map(Number);
+  let n = 0;
+  for (const [nq, nr] of neighbors(q, r)) {
+    const c = board[key(nq, nr)];
+    if (c && (c.stack.length || c.cube || c.spirit)) n++;
+  }
+  return n;
+}
+
 /* 贪心放置规划:逐枚尝试所有合法格。
-   收益 = 计分增量 + 图案推进 + 下一枚方块卡面分增量 + 保护区建造奖励 + 堆叠奖励 - 空格成本 */
-function planPlacements(p, tokens) {
+   收益 = 计分增量 + 图案推进 + 下一枚方块卡面分增量 + 保护区建造奖励 + 堆叠奖励 - 空格成本 + 中心度/邻接 */
+function planPlacementsOne(p, tokens, forcedOrder) {
   const clone = {};
   for (const k in p.board) clone[k] = { stack: p.board[k].stack.slice(), cube: p.board[k].cube, spirit: p.board[k].spirit };
   // sancts 单独克隆:模拟中也要维护"一个板块只在一个格子建造"的锁定
   const tmpP = { ...p, board: clone, sancts: (p.sancts || []).map(s => ({ ...s })) };
   const cards = p.cards.filter(c => !c.done);
   const steps = []; let total = 0;
+  const geom = boardGeom(clone);
+  const st = sideTune();
+  const focus = dynamicFocus(p, st);
   /* 空格成本随版图变满而放大:开局自由铺河流/田野/图案,空格少于 ~10 时才强力
      堆叠续命。固定代价会让 AI 从第一回合起不敢铺开,版图过早填满直接触发终局。 */
   const free0 = Object.values(p.board).filter(c => !c.stack.length && !c.cube && !c.spirit).length;
   const cellCost = AI_TUNE.emptyCost * (1 + Math.max(0, 10 - free0) * AI_TUNE.lateEmptyK);
-  // 稀有度优先放置(红/综先放,蓝/黄后放)
-  const order = tokens.slice().sort((a, b) => scarcity(b) - scarcity(a));
+  // 稀有度优先放置(红/综先放,蓝/黄后放);指定顺序时用于排列搜索。
+  const order = forcedOrder ? forcedOrder.slice() : tokens.slice().sort((a, b) => scarcity(b) - scarcity(a));
   for (const t of order) {
     let bestK = null, bestV = -1e9;
     const baseScore = scoreBoard(tmpP).total;
@@ -278,6 +360,7 @@ function planPlacements(p, tokens) {
     for (const k in before) {
       const potBefore = terrainPotential(clone, k);
       const wasEmpty = clone[k].stack.length === 0;
+      const devBefore = developedNeighbors(clone, k);
       clone[k].stack.push(t);
       let v = scoreBoard(tmpP).total - baseScore;
       let gain = 0, cubeGain = 0;
@@ -287,13 +370,15 @@ function planPlacements(p, tokens) {
         const afterM = findMatches(ci.def, clone, tmpP);
         cubeGain += cardCubeScore(ci, afterM) - beforeCubeScore[i];
       }
-      v += gain + cubeGain * AI_TUNE.cubeGain;
-      v += Math.max(0, terrainPotential(clone, k) - potBefore) * AI_TUNE.terrain;
+      v += gain * focus.animal + cubeGain * AI_TUNE.cubeGain * focus.animal;
+      const potAfter = terrainPotential(clone, k);
+      const buildingMul = topType(clone[k]) === 'building' ? focus.building : 1;
+      v += Math.max(0, potAfter - potBefore) * AI_TUNE.terrain * focus.terrain * buildingMul;
       v += (clone[k].stack.length - 1) * AI_TUNE.stackBonus; // 叠高既有格:既攒高度分又省空格
       if (wasEmpty) v -= cellCost;   // 空格越少,占用新空格越贵(别太早触发终局)
-      v += sanctBuildBonus(p, clone, k, t);
-      const [q, r] = k.split(',').map(Number);
-      v -= (Math.abs(q) + Math.abs(r) + Math.abs(q + r)) * 0.05;
+      v += sanctBuildBonus(p, clone, k, t, geom) * focus.sanct;
+      v += st.center * centralPos(k, geom);
+      v += st.frontier * devBefore;
       clone[k].stack.pop();
       if (v > bestV) { bestV = v; bestK = k; }
     }
@@ -309,8 +394,55 @@ function planPlacements(p, tokens) {
   return { steps, val: total };
 }
 
+/* 3 枚标记的顺序会影响图案先后;固定按稀有度排序只是启发式。
+   对每个供应组额外尝试所有不重复顺序,选总分最高的方案。 */
+function permutationOrders(tokens) {
+  if (tokens.length <= 1) return [tokens.slice()];
+  const out = [];
+  const seen = new Set();
+  const walk = (rest, acc) => {
+    if (!rest.length) {
+      const sig = acc.join('|');
+      if (!seen.has(sig)) { seen.add(sig); out.push(acc.slice()); }
+      return;
+    }
+    for (let i = 0; i < rest.length; i++) walk(rest.slice(0, i).concat(rest.slice(i + 1)), acc.concat(rest[i]));
+  };
+  walk(tokens, []);
+  return out;
+}
+function planPlacements(p, tokens, opts = {}) {
+  const orders = opts.allOrders ? permutationOrders(tokens) : [null];
+  let best = null;
+  for (const order of orders) {
+    const r = planPlacementsOne(p, tokens, order);
+    if (!best || r.val > best.val) best = r;
+  }
+  return best;
+}
+
 function hasAnyPlacement(board, type, player) {
   return Object.keys(board).some(k => canPlace(board, k, type, player));
+}
+/* 对手对这组标记的最高收益:用于选组时做动态防守。
+   只看「对手也能拿这组做什么」,不改变自己的放置评分,避免因为对手而乱铺。 */
+function opponentGroupValue(gi, meIdx) {
+  let best = 0;
+  const me = G.players[meIdx];
+  const myScore = scoreBoard(me).total;
+  for (let i = 0; i < G.players.length; i++) {
+    if (i === meIdx) continue;
+    const op = G.players[i];
+    if (!op || !op.cards) continue;
+    const oppScore = scoreBoard(op).total;
+    const active = op.cards.filter(c => !c.done);
+    const near = active.filter(c => cardProgress(c.def, op.board, op) >= c.def.pat.length - 1).length;
+    // 只有对手已经领先或手里有快完成卡时才防守,避免为了“抢组”牺牲自己的动物/地形。
+    if (oppScore < myScore + 15 && near === 0) continue;
+    const pv = planPlacements(op, G.supply[gi]).val;
+    if (pv > best) best = pv;
+  }
+  return best;
 }
 function scarcity(t) { return { building: 6, trunk: 5, tree: 4, mountain: 3, field: 2, water: 1 }[t]; }
 
