@@ -160,7 +160,7 @@ function cardHtml(ci, opts = {}) {
   // 精灵牌也用与动物牌同尺寸的分数方格(淡紫色,见 .cubeslot.elf-slot),不再显示 2/5 纯文本
   const elfTitle = '紫色精灵方块:只能放在卡面带「*」的锚点格;与动物(橙)方块同格 5 分/格,单独 2 分/格;不能与自然之灵(白)方块同格';
   const cubesDisplay = ci.def.elf
-    ? ci.def.cubes.map(v => `<div class="cubeslot elf-slot" title="${elfTitle}">${v}</div>`).join('')
+    ? ci.def.cubes.map((v, i) => `<div class="cubeslot elf-slot${i < ci.placed ? ' filled' : ''}" title="${elfTitle}">${v}</div>`).join('')
     : ci.def.spirit ? '★'
     : ci.def.cubes.map((v, i) => `<div class="cubeslot ${i < ci.placed ? 'filled' : ''}">${v}</div>`).join('');
   d.innerHTML = `${iconHtml}<div class="nm">${ci.def.name}</div>
