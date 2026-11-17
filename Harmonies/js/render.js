@@ -5,7 +5,7 @@
 const HEX = 38, LAY = 9;
 /* B 面底图整体显示：按画布中心缩到 90% 并居中，避免上下/左右裁切。
    格子绘制与点击检测同步用这一变换，保证不脱格。 */
-const BOARD_VIEW = { B: { k: 0.90, dx: -13.7, dy: 54.8 } };
+const BOARD_VIEW = { B: { k: 0.918, dx: -14.0, dy: 56.0 } };
 // 平顶六边形坐标:列内序号按各面版图的 rmin 归一,奇数列下移半格
 function hexPx(q, r) {
   const s = BOARD_SHAPES[G.side] || BOARD_SHAPES.A;
