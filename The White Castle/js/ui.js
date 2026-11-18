@@ -459,8 +459,14 @@
     const root = $('#modalRoot');
     if (g.phase === 'gameEnd') return;
     const pd = g.pending;
-    if (!pd || !isHumanTurn(g)) { pendingShownFor = null; return; }
-    const key = JSON.stringify([pd.kind, pd.playerId, (pd.options || pd.pool || pd.pairs || []).length, g.log.length]);
+    if (!pd || !isHumanTurn(g)) {
+      /* 待决项已经结算完：把上一轮的待决弹窗一起收掉，避免开局选卡/选择资源
+         已经完成后弹窗还留在屏幕上。 */
+      if (pendingShownFor !== null) closeModal();
+      pendingShownFor = null;
+      return;
+    }
+    const key = JSON.stringify([pd.kind, pd.playerId, (pd.options || pd.pool || pd.pairs || []).length, pd.n || '', g.log.length]);
     if (pendingShownFor === key) return;
     pendingShownFor = key;
     const allCmds = E.legalCommands(g);
@@ -471,7 +477,11 @@
     /* ★ 撤销：选择界面里也要能用（以前只在状态栏，pending 时被隐藏，选到一半退不回去） */
     const canUndo = allCmds.some((c) => c.type === 'undo');
     /* 弹窗标题也按「条件 + 效果」写，不写地点名 */
-    const title = { draft: '开局选卡：选一对（资源卡入灯笼区，行动卡入领地）', gainAny: '选择资源', choose: '选择一项', orderPick: '选择结算顺序（先结算哪一项效果）', retainer: '家臣行动：支付珍珠晋升 / 支付钱进城门', promoteRoom: '晋升：选择浅色效果', gardener: '园丁行动：支付食物，获得奖励', samurai: '武士行动：支付铁，获得奖励', domainPick: '领地行动：选择一色，获得奖励', castle: '城堡行动', outskirtGain: '城郊窗帘：选择一色', trainYellow: '训练场黄面奖励', trainBlue: '训练场蓝面行动', gardenGain: '庭院奖励', wallPick: '墙外：选 1 个行动' }[pd.kind] || '选择';
+    const baseTitle = { draft: '开局选卡：选一对（资源卡入灯笼区，行动卡入领地）', gainAny: '选择资源', choose: '选择一项', orderPick: '选择结算顺序（先结算哪一项效果）', retainer: '家臣行动：支付珍珠晋升 / 支付钱进城门', promoteRoom: '晋升：选择浅色效果', gardener: '园丁行动：支付食物，获得奖励', samurai: '武士行动：支付铁，获得奖励', domainPick: '领地行动：选择一色，获得奖励', castle: '城堡行动', outskirtGain: '城郊窗帘：选择一色', trainYellow: '训练场黄面奖励', trainBlue: '训练场蓝面行动', gardenGain: '庭院奖励', wallPick: '墙外：选 1 个行动' }[pd.kind] || '选择';
+    /* 任选 N 资源会连着弹 N 次；把「还需几个」写进标题，避免看起来像同一张卡没反应。 */
+    const title = pd.kind === 'gainAny'
+      ? `${pd.draft ? '开局选卡：' : ''}选择资源${pd.n > 1 ? `（还需 ${pd.n} 个）` : '（还需 1 个）'}`
+      : baseTitle;
     const opts = cmds.map((c) => {
       let art = '';
       if (pd.kind === 'draft') {
@@ -703,12 +713,14 @@
     }));
   }
   function showSetup() {
+    closeModal();
     $('#setup').classList.remove('hidden');
     $('#game').classList.add('hidden');
     S.g = null;
   }
   function startGame() {
     endShown = false; pendingShownFor = null;
+    closeModal();
     S.g = E.newGame({ playerCount: S.opts.players, humanSeat: S.opts.seat, difficulty: S.opts.diff, order: S.opts.order || 'first' });
     $('#setup').classList.add('hidden');
     $('#game').classList.remove('hidden');
