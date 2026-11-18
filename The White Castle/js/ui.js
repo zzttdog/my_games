@@ -471,7 +471,7 @@
     /* ★ 撤销：选择界面里也要能用（以前只在状态栏，pending 时被隐藏，选到一半退不回去） */
     const canUndo = allCmds.some((c) => c.type === 'undo');
     /* 弹窗标题也按「条件 + 效果」写，不写地点名 */
-    const title = { draft: '开局选卡：选一对（资源卡入灯笼区，行动卡入领地）', gainAny: '选择资源', choose: '选择一项', retainer: '家臣行动：支付珍珠晋升 / 支付钱进城门', promoteRoom: '晋升：选择浅色效果', gardener: '园丁行动：支付食物，获得奖励', samurai: '武士行动：支付铁，获得奖励', domainPick: '领地行动：选择一色，获得奖励', castle: '城堡行动', outskirtGain: '城郊窗帘：选择一色', trainYellow: '训练场黄面奖励', trainBlue: '训练场蓝面行动', gardenGain: '庭院奖励', wallPick: '墙外：选 1 个行动' }[pd.kind] || '选择';
+    const title = { draft: '开局选卡：选一对（资源卡入灯笼区，行动卡入领地）', gainAny: '选择资源', choose: '选择一项', orderPick: '选择结算顺序（先结算哪一项效果）', retainer: '家臣行动：支付珍珠晋升 / 支付钱进城门', promoteRoom: '晋升：选择浅色效果', gardener: '园丁行动：支付食物，获得奖励', samurai: '武士行动：支付铁，获得奖励', domainPick: '领地行动：选择一色，获得奖励', castle: '城堡行动', outskirtGain: '城郊窗帘：选择一色', trainYellow: '训练场黄面奖励', trainBlue: '训练场蓝面行动', gardenGain: '庭院奖励', wallPick: '墙外：选 1 个行动' }[pd.kind] || '选择';
     const opts = cmds.map((c) => {
       let art = '';
       if (pd.kind === 'draft') {

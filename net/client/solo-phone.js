@@ -103,6 +103,13 @@
     'html.__solo .side .log-wrap:not(.stats-wrap){max-height:calc(var(--solo-vh,100vh) * .38)!important}',
     'html.__solo .side .log-wrap:not(.stats-wrap) .log{max-height:calc(var(--solo-vh,100vh) * .38 - 34px)!important;',
     '  overflow-y:auto!important;-webkit-overflow-scrolling:touch!important}',
+    /* —— 开局设置页 ——
+       .setup 的 min-height:100vh 在 iframe 里等于整页高度，会把设置卡推到页面中段；
+       底图 cover 也跟着整页放大。手机壳里去掉底图、取消 100vh、设置卡直接贴顶。 */
+    'html.__solo .setup{min-height:0!important;display:block!important;padding:10px!important;',
+    '  border:0!important;background:#0d0b0a!important}',
+    'html.__solo .setup-card{width:100%!important;margin:8px auto 18px!important;',
+    '  padding:26px 18px 20px!important}',
     /* 触控目标放大 */
     'html.__solo .btn{padding:12px 10px!important;min-height:44px!important}',
     'html.__solo .opt{min-height:38px}',

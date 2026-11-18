@@ -482,7 +482,7 @@ window.WCEngine = (function () {
     /* ★ 多块板块 → 弹「先执行哪块」的选择（orderPick 与放骰命中多格共用一套） */
     const seqs = a.tiles
       .filter((tc) => (tc.tile.yellow || []).length)
-      .map((tc) => ({ n: tc.tile.name, eff: (tc.tile.yellow || []).slice(), pickLabel: `先执行「${tc.tile.name}」` }));
+      .map((tc) => ({ n: tc.tile.name, eff: (tc.tile.yellow || []).slice(), pickLabel: `先执行：${describeEffects(tc.tile.yellow) || '无奖励'}` }));
     if (seqs.length > 1) {
       g.pending = {
         kind: 'orderPick', playerId: p.id, seqs, rest: rest || [], ctx: ctx || null,
@@ -1207,10 +1207,10 @@ window.WCEngine = (function () {
           pushLog(g, `命中 ${room.def.name} 格${seqs[0].n}`, 'info');
         } else if (seqs.length > 1) {
           g.inHand = null;
-          pushLog(g, `${p.name} 命中 ${seqs.length} 格，按所选顺序结算：${seqs.map((s) => `格${s.n} ${describeEffects(s.eff) || '无奖励'}`).join('；')}`, 'info');
+          pushLog(g, `${p.name} 命中 ${seqs.length} 处，按所选顺序结算：${seqs.map((s) => describeEffects(s.eff) || '无奖励').join('；')}`, 'info');
           g.pending = {
             kind: 'orderPick', playerId: p.id, seqs, rest: effects, ctx,
-            options: seqs.map((s, k) => ({ id: String(k), label: `先结算 格${s.n}` }))
+            options: seqs.map((s, k) => ({ id: String(k), label: `先结算：${describeEffects(s.eff) || '无奖励'}` }))
           };
           return;
         }
@@ -1293,8 +1293,8 @@ window.WCEngine = (function () {
         const first = pd.seqs[k];
         const restSeqs = pd.seqs.filter((_, idx) => idx !== k);
         const flat = first.eff.concat(...restSeqs.map((x) => x.eff));
-        /* 日志用按钮文案（放骰=「先结算 格N」/ 武士=「先执行「板块名」」） */
-        pushLog(g, opt.label || `先结算 格${first.n}`, 'act');
+        /* 日志直接用按钮文案（已写成「先结算：效果」/「先执行：效果」，不再带格号或板块名） */
+        pushLog(g, opt.label || `先结算：${describeEffects(first.eff) || '无奖励'}`, 'act');
         runEffects(g, p, flat.concat(pd.rest || []), ctx);
         break;
       }

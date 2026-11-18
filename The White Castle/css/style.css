@@ -1009,6 +1009,9 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
   .game { grid-template-columns: 1fr; }
   .side { position: static; order: 3; }
   .players { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* 手机设置页：不要整屏底图，也不要 100vh 把设置卡推到页面中段 */
+  .setup { min-height: 0; display: block; padding: 10px; border: 0; background: #0d0b0a; }
+  .setup-card { width: 100%; margin: 8px auto 18px; }
 }
 
 @media (max-width: 620px) {
