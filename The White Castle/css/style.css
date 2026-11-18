@@ -1012,6 +1012,9 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
   /* 手机设置页：不要整屏底图，也不要 100vh 把设置卡推到页面中段 */
   .setup { min-height: 0; display: block; padding: 10px; border: 0; background: #0d0b0a; }
   .setup-card { width: 100%; margin: 8px auto 18px; }
+  /* 手机记录区独立滚动，不再把整页拉长 */
+  .side .log-wrap:not(.stats-wrap) { max-height: 38vh; }
+  .side .log-wrap:not(.stats-wrap) .log { max-height: calc(38vh - 34px); }
 }
 
 @media (max-width: 620px) {
