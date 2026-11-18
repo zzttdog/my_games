@@ -87,6 +87,22 @@
     '  overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;padding-right:2px}',
     'html.__solo #setupOv #btnStart{position:sticky!important;bottom:0!important;margin-top:10px!important;',
     '  z-index:3!important;box-shadow:0 -8px 16px rgba(10,12,16,.85)}',
+    /* —— 对局中的选择弹窗 / 记录区 ——
+       iframe 高度被设成整页内容高度，里面的 fixed / 100vh 会以整页高度为基准，
+       选择弹窗就会落在整页中间（手机上要往下拖很久）。
+       外壳把「当前可见区域」换算成 --solo-top / --solo-vh 传进来：
+       弹窗改成绝对定位，钉在用户此刻看到的区域顶部；记录区按可见高度限高、自己滚。 */
+    'html.__solo .modal-root{position:absolute!important;left:0!important;right:0!important;',
+    '  top:var(--solo-top,0px)!important;height:var(--solo-vh,100vh)!important;bottom:auto!important;',
+    '  place-items:start center!important;align-items:start!important;justify-items:center!important;',
+    '  padding:8px 10px!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important}',
+    'html.__solo .modal-root .modal{width:100%!important;max-height:calc(var(--solo-vh,100vh) - 16px)!important;',
+    '  margin:0!important}',
+    'html.__solo .modal-root .modal>div:last-child{flex:1 1 auto!important;min-height:0!important;',
+    '  -webkit-overflow-scrolling:touch!important}',
+    'html.__solo .side .log-wrap:not(.stats-wrap){max-height:calc(var(--solo-vh,100vh) * .38)!important}',
+    'html.__solo .side .log-wrap:not(.stats-wrap) .log{max-height:calc(var(--solo-vh,100vh) * .38 - 34px)!important;',
+    '  overflow-y:auto!important;-webkit-overflow-scrolling:touch!important}',
     /* 触控目标放大 */
     'html.__solo .btn{padding:12px 10px!important;min-height:44px!important}',
     'html.__solo .opt{min-height:38px}',
@@ -121,14 +137,31 @@
     return MGShell.minBaseW(frame, d, vw);
   }
 
+  /* 把「外层当前可见区域」换算成 iframe 内部的坐标。
+     iframe 被 scale(s) 缩放，里面 1px = 屏幕上 s px；所以：
+       --solo-vh  = 可见高度 / s
+       --solo-top = 外层已滚动距离 / s + iframe 自身滚动距离
+     对局里的选择弹窗用这两个值定位到用户此刻看到的区域，而不是整页中间。 */
+  var lastScale = 1;
+  function setViewportVars(d, w, s) {
+    if (!d) return;
+    if (!s || s < 0.01) s = 1;
+    lastScale = s;
+    var innerScroll = 0;
+    try { innerScroll = (w && w.scrollY) || 0; } catch (e) {}
+    var vh = Math.round(Math.max(1, wrap.clientHeight) / s);
+    var top = Math.round(Math.max(0, wrap.scrollTop || 0) / s + innerScroll);
+    try {
+      d.documentElement.style.setProperty('--solo-vh', vh + 'px');
+      d.documentElement.style.setProperty('--solo-top', top + 'px');
+    } catch (e) {}
+  }
+
   function apply() {
     var d = doc(), w = win();
     if (!d || !d.body) return;
 
     var vw = wrap.clientWidth || window.innerWidth;
-    /* 把真实可见高度告诉 iframe：iframe 高度 = 整页内容高度，
-       里面的 100vh 会变成内容高度，弹窗就会被撑到屏幕外。 */
-    try { d.documentElement.style.setProperty('--solo-vh', Math.round(wrap.clientHeight) + 'px'); } catch (e) {}
 
     if (!fitMode) {
       /* 原尺寸：按最小可用宽度排版、不缩放，横向交给外层滚动，方便细看卡面与数字 */
@@ -141,6 +174,7 @@
       pan.style.height = h0 + 'px';
       ratio.textContent = '100%';
       lastH = h0;
+      setViewportVars(d, w, 1);
       return;
     }
 
@@ -156,6 +190,7 @@
     pan.style.height = Math.round(h * s) + 'px';
     ratio.textContent = Math.round(s * 100) + '%';
     lastH = h;
+    setViewportVars(d, w, s);
   }
 
   /* 内容高度随回合推进变化（手牌 / 市场 / 棋盘重建），定期校准；
@@ -238,6 +273,12 @@
   }
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', onResize);
+
+  /* 外层滚动时同步「当前可见区域」，否则打开中的选择弹窗会留在上一次的位置。 */
+  wrap.addEventListener('scroll', function () {
+    var d = doc(), w = win();
+    if (d) setViewportVars(d, w, lastScale);
+  }, { passive: true });
 
   boot();
 })();

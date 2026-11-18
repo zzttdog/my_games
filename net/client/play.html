@@ -938,6 +938,20 @@
        响应式层去排版（Harmonies/index.html 的四档 @media），外层只负责高度自适应，
        不做 transform 缩放，也不注入第二套样式。
        两种模式都实测 iframe 内容高度，避免棋盘下方出现大片空白。 */
+    var MG_MOBILE_CSS = [
+      'html.__mg_mobile .modal-root{position:absolute!important;left:0!important;right:0!important;',
+      '  top:var(--mg-mobile-top,0px)!important;height:var(--mg-mobile-vh,100vh)!important;bottom:auto!important;',
+      '  place-items:start center!important;align-items:start!important;justify-items:center!important;',
+      '  padding:8px 10px!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important}',
+      'html.__mg_mobile .modal-root .modal{width:100%!important;max-height:calc(var(--mg-mobile-vh,100vh) - 16px)!important;',
+      '  margin:0!important}',
+      'html.__mg_mobile .modal-root .modal>div:last-child{flex:1 1 auto!important;min-height:0!important;',
+      '  -webkit-overflow-scrolling:touch!important}',
+      'html.__mg_mobile .side .log-wrap:not(.stats-wrap){max-height:calc(var(--mg-mobile-vh,100vh) * .38)!important}',
+      'html.__mg_mobile .side .log-wrap:not(.stats-wrap) .log{max-height:calc(var(--mg-mobile-vh,100vh) * .38 - 34px)!important;',
+      '  overflow-y:auto!important;-webkit-overflow-scrolling:touch!important}'
+    ].join('');
+
     function setupZoom() {
       var wrap = $('framewrap'), pan = $('framepan'), inner = $('frameinner');
       var BASE_W = 1180, BASE_H = 860, scale = 1;
@@ -951,6 +965,33 @@
       /* 量 iframe 里真实内容高度；共享实现见 mobile-shell.js。 */
       function contentH() {
         return window.MGShell ? MGShell.contentH($('frame'), null, null, 18) : 0;
+      }
+
+      function frameDoc() {
+        try { return $('frame').contentDocument; } catch (e) { return null; }
+      }
+
+      /* 联机页同样是「iframe 高度 = 整页内容高度」，
+         里面的 fixed / 100vh 会以整页高度为基准：选择弹窗落在页面中段，记录区被拉长。
+         把当前可见区域换算成 --mg-mobile-top / --mg-mobile-vh 注入 iframe。 */
+      function syncMobileViewport(vh) {
+        if (!mobile || native) return;
+        var d = frameDoc();
+        if (!d || !d.head) return;
+        if (game === 'castle' && !d.getElementById('__mg_mobile_css')) {
+          var st = d.createElement('style');
+          st.id = '__mg_mobile_css';
+          st.textContent = MG_MOBILE_CSS;
+          d.head.appendChild(st);
+          try { d.documentElement.classList.add('__mg_mobile'); } catch (e) {}
+        }
+        if (!d.getElementById('__mg_mobile_css')) return;
+        var sc = $('framescroll');
+        var top = Math.round(((sc && sc.scrollTop) || 0) / Math.max(scale, .01));
+        try {
+          d.documentElement.style.setProperty('--mg-mobile-vh', vh + 'px');
+          d.documentElement.style.setProperty('--mg-mobile-top', top + 'px');
+        } catch (e) {}
       }
 
       function setBodyZoom(z) {
@@ -991,6 +1032,7 @@
         inner.style.height = h + 'px';
         inner.style.transform = 'scale(' + scale + ')';
         if (label) label.textContent = Math.round(scale * 100) + '%';
+        syncMobileViewport(vh);
       }
 
       function fit() {
@@ -1030,6 +1072,11 @@
         if (m !== mobile) { init(); }
         else if (mobile) apply();
       });
+      /* 外层滚动时同步可见区域，避免已打开的选择弹窗留在原处。 */
+      var fscroll = $('framescroll');
+      if (fscroll) fscroll.addEventListener('scroll', function () {
+        if (mobile && !native) syncMobileViewport(Math.round(wrap.clientHeight / Math.max(scale, .01)));
+      }, { passive: true });
       /* 内容高度会随回合推进变化（手牌 / 市场 / 棋盘重建），定期校准，差值小于 8px 不动以免抖动 */
       setInterval(function () {
         if (!mobile) return;
