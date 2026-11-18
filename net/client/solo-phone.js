@@ -1,17 +1,24 @@
 (function () {
   'use strict';
 
+  var qs = new URLSearchParams(location.search);
+  /* 手机壳外层每次升级都会换 v；把同一个 v 传给 iframe 里的游戏页，
+     否则游戏页 HTML/旧 UI 可能被浏览器缓存，界面看起来像没改。 */
+  var shellV = qs.get('v') || '20261118e';
+  function withV(url) {
+    return url + (url.indexOf('?') >= 0 ? '&' : '?') + 'v=' + encodeURIComponent(shellV);
+  }
+
   /* 游戏目录 / 名称来自根 games.json 生成的 MG_GAMES；新增游戏只改清单 */
   var CFG = (window.MG_GAMES && window.MG_GAMES.games) || {};
   var GAMES = {};
   Object.keys(CFG).forEach(function (k) {
-    GAMES[k] = { url: '../../' + (CFG[k].entry || ''), name: CFG[k].subtitle || CFG[k].title || k };
+    GAMES[k] = { url: withV('../../' + (CFG[k].entry || '')), name: CFG[k].subtitle || CFG[k].title || k };
   });
   if (!Object.keys(GAMES).length) {
-    GAMES = { harmonies: { url: '../../Harmonies/index.html', name: '自然和弦' }, castle: { url: '../../The White Castle/index.html', name: '白城' } };
+    GAMES = { harmonies: { url: withV('../../Harmonies/index.html'), name: '自然和弦' }, castle: { url: withV('../../The White Castle/index.html'), name: '白城' } };
   }
 
-  var qs = new URLSearchParams(location.search);
   var qk = qs.get('game');
   var key = GAMES[qk] ? qk : Object.keys(GAMES)[0];
   var cfg = GAMES[key];
