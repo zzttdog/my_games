@@ -858,6 +858,10 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
 .modal-ex .ex-lab { font-size: 10px; letter-spacing: .12em; color: var(--paper-dim); opacity: .75; }
 .modal-ex button.ex { padding: 4px 9px; font-size: 10px; }
 
+/* 兜底：只要对局区已经显示，开局设置页必须消失。
+   避免某些旧状态/重绘把「入局」设置卡留在对局页面下面。 */
+#game:not(.hidden) ~ #setup { display: none !important; }
+
 /* ── 设置页 ── */
 .setup {
   min-height: calc(100vh - 120px);
