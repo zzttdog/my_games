@@ -351,6 +351,44 @@
         return '<div class="bslot domslot" data-place="domain:' + c + '" style="left:' + pct(A.dieX) + ';top:' + pct(A.rows[c]) + '" title="' + esc(cmd.label) + '"></div>';
       }).join('');
 
+      /* ── 个人领地图上的可视化库存 ───────────────────────────────
+         ① 资源记录轨：三条 0–7 折线轨，用一枚资源色方块标当前数量；
+         ② 待派成员：每行 5 个印刷格，用半透明玩家色圆点表示池里剩余数；
+         ③ 家纹：顶部 5 个圆槽按 p.seals 放 mk8；
+         ④ 右上 HUD：mk8 家纹数 + mk5 钱数 + 2 个家纹兑换按钮。 */
+      const resCubes = ['food', 'iron', 'pearl'].map((r) => {
+        const n = Math.max(0, Math.min(7, Number(p.res && p.res[r]) || 0));
+        const col = D.RESOURCES[r] || { hex: '#8b8172', name: r };
+        return `<span class="presource" style="left:${pct(A.resX[r])};top:${pct(A.resY[n])};--rc:${col.hex}" title="${esc(col.name)} ${n}/7"></span>`;
+      }).join('');
+
+      const WORKER_ROWS = [['clan', '家臣'], ['gardener', '园丁'], ['samurai', '武士']];
+      const workerDots = WORKER_ROWS.map(([pool, label]) => {
+        const n = Math.max(0, Math.min(5, Number(p.pools && p.pools[pool]) || 0));
+        return A.workerX.map((x, i) => i < n
+          ? `<span class="pworker-dot" style="left:${pct(x)};top:${pct(A.workerY[pool])};--pc:${p.color.hex}" title="${esc(label)}：池中剩余 ${n}/5"></span>`
+          : '').join('');
+      }).join('');
+
+      const sealTokens = A.crests.map((xy, i) => i < (Number(p.seals) || 0)
+        ? `<span class="pseal-token" style="left:${pct(xy[0])};top:${pct(xy[1])}"><img src="assets/${assetSrc('tiles/mk8.png')}" alt="家纹"${fallbackAttr}></span>`
+        : '').join('');
+
+      const showExchange = !p.isAI && (p.id === cur || g.phase === 'draft');
+      const canUseExchange = p.id === cur;
+      const canRes = canUseExchange && (Number(p.seals) || 0) >= 2;
+      const canCoin = canUseExchange && (Number(p.seals) || 0) >= 1;
+      const sealHud = `<div class="pseal-hud" style="left:${pct(A.sealHud.x)};top:${pct(A.sealHud.y)};width:${pct(A.sealHud.w)};min-height:${pct(A.sealHud.h)}">
+        <div class="pseal-hud-main">
+          <span class="phud" title="家纹 ${p.seals}/5"><img src="assets/${assetSrc('tiles/mk8.png')}" alt=""${fallbackAttr}><b>${p.seals}</b></span>
+          <span class="phud" title="钱 ${p.coins}"><img src="assets/${assetSrc('tiles/mk5.png')}" alt=""${fallbackAttr}><b>${p.coins}</b></span>
+        </div>
+        ${showExchange ? `<div class="pseal-ex">
+          <button class="pex-btn" data-exchange="seal2res" ${canRes ? '' : 'disabled'} title="2 家纹换 1 个自选资源"><span>2纹</span><span>换资源</span></button>
+          <button class="pex-btn" data-exchange="seal2coin" ${canCoin ? '' : 'disabled'} title="1 家纹换 1 钱"><span>1纹</span><span>换钱</span></button>
+        </div>` : ''}
+      </div>`;
+
       /* ── 灯笼奖励区（★ 位置/尺寸改这里）──────────────────────────────
          位置：data.js 的 BOARD_LAYOUT.domain.base.lantern，[x%, y%] = 整条区域的
                【左上角】（和 CSS 第 10 段注释一致）。
@@ -432,8 +470,9 @@
       return `<div class="pcard ${p.id === cur ? 'active' : ''}" style="--pc:${p.color.hex}">
         <div class="pwrap" style="aspect-ratio:${A.ratio}">
           <img class="pimg" src="assets/${assetSrc(A.img)}" alt="个人领地"${fallbackAttr}>
-          ${qdice}${cardHtml}${domSlots}
+          ${resCubes}${workerDots}${sealTokens}${qdice}${cardHtml}${domSlots}
           ${lanCards ? `<div class="plantern-strip" style="left:${pct(LANT[0])};top:${pct(LANT[1])};right:1.2%">${lanCards}</div>` : ''}
+          ${sealHud}
         </div>
         <div class="gcards">${frontCards}</div>
         ${lanternCards ? `<div class="gcards glantern"><span class="glan-title">灯笼区</span>${lanternCards}</div>` : ''}

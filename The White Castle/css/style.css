@@ -558,6 +558,111 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
 }
 .pimg { position: absolute; inset: 0; width: 100%; height: 100%; }
 
+/* ── 个人领地图上的资源方块 / 成员圆点 / 家纹 ─────────────────────
+   位置全部来自 data.js 的 BOARD_LAYOUT.domain.base，改坐标只改那一处。
+   尺寸用 cqw：桌面和 2/3/4 人局的玩家面板宽度不同，但都会等比缩放。 */
+.presource {
+  position: absolute;
+  z-index: 2;
+  width: 3.6cqw;
+  height: 3.6cqw;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 255, 255, .58);
+  border-radius: 2px;
+  background: var(--rc, #8b8172);
+  box-shadow:
+    inset -2px -2px 3px rgba(0, 0, 0, .38),
+    inset 2px 2px 2px rgba(255, 255, 255, .3),
+    0 2px 4px rgba(0, 0, 0, .24);
+}
+.presource::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .28), transparent 46%, rgba(0, 0, 0, .28));
+}
+
+.pworker-dot {
+  position: absolute;
+  z-index: 2;
+  width: 2.35cqw;
+  height: 2.35cqw;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 255, 255, .55);
+  border-radius: 50%;
+  background: var(--pc, #a97c2f);
+  opacity: .48;
+  box-shadow: 0 0 3px rgba(0, 0, 0, .38);
+  pointer-events: none;
+}
+
+.pseal-token {
+  position: absolute;
+  z-index: 3;
+  width: 7.3cqw;
+  height: 7.3cqw;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .42);
+  pointer-events: none;
+}
+.pseal-token img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* 右上角家纹 / 钱 / 兑换 HUD（家纹在左，钱在右） */
+.pseal-hud {
+  position: absolute;
+  z-index: 9;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: .9cqw;
+  padding: 1.0cqw 1.1cqw;
+  border: 1px solid rgba(201, 164, 95, .42);
+  border-radius: 4px;
+  background: rgba(10, 8, 7, .84);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .32);
+  color: #f0e4c8;
+}
+.pseal-hud-main { display: flex; align-items: center; gap: 1.5cqw; }
+.phud {
+  display: inline-flex;
+  align-items: center;
+  gap: .5cqw;
+  font-size: clamp(7px, 2.2cqw, 12px);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+.phud img {
+  width: clamp(14px, 4.1cqw, 24px);
+  height: clamp(14px, 4.1cqw, 24px);
+  object-fit: contain;
+  border-radius: 50%;
+}
+.pseal-ex { display: flex; gap: .55cqw; }
+.pex-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 2px 3px;
+  border: 1px solid rgba(232, 201, 135, .6);
+  border-radius: 3px;
+  background: rgba(201, 164, 95, .22);
+  color: #fff2d2;
+  font: inherit;
+  font-size: clamp(7px, 2.1cqw, 10px);
+  font-weight: 600;
+  line-height: 1.15;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pex-btn span { display: block; }
+.pex-btn span:last-child { font-size: .92em; opacity: .92; }
+.pex-btn:hover { background: rgba(201, 164, 95, .42); }
+.pex-btn:disabled { opacity: .55; cursor: default; }
+
 /* 三条队列上的骰子（位置来自 data.js 的 domain.rows / dieX） */
 .pdice { position: absolute; transform: translate(-50%, -50%); }
 .pwrap .die.sm { width: 6cqw; height: 6cqw; }

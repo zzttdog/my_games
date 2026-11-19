@@ -526,7 +526,17 @@ window.WCData = (function () {
         rows: { coral: 25.5, black: 41.2, white: 57.3 },
         /* ★ 行动区卡位：卡牌【中心点】。想挪那张大卡就改这两个数。
              尺寸不在这里 → css/style.css 第 09 段 .art-thumb.file.pact */
-        dieX: 38.2, card: [88.5, 42.0], hud: [64.0, 76.0], lantern: [45.5, 70.0]
+        dieX: 38.2, card: [88.5, 42.0], hud: [64.0, 76.0], lantern: [45.5, 70.0],
+        /* ── 个人领地叠层：资源记录轨 / 待派成员格 / 家纹槽 ────────────
+           资源：三条白色折线轨（0–7），x 是轨心，y 按 0→7 的值排。
+           成员：每行 5 个印刷格，用玩家色半透明圆点表示池里还剩几个。
+           家纹：顶部 5 个圆槽，最多放 5 枚；右上角是「家纹/钱 + 兑换」HUD。 */
+        resX: { food: 8.1, iron: 17.6, pearl: 27.2 },
+        resY: [85.2, 76.0, 67.3, 58.4, 50.1, 42.0, 33.7, 25.7],
+        workerX: [50.7, 56.2, 61.7, 67.2, 72.7],
+        workerY: { clan: 23.0, gardener: 40.2, samurai: 57.0 },
+        crests: [[7.1, 8.5], [17.6, 8.5], [28.2, 8.5], [38.8, 8.5], [49.4, 8.5]],
+        sealHud: [54.8, 1.7, 29.8, 14.5]
       }
     }
   };
@@ -557,7 +567,18 @@ window.WCData = (function () {
       dieX: u(BOARD_LAYOUT.domain.base.dieX),
       card: uv(BOARD_LAYOUT.domain.base.card),
       hud: uv(BOARD_LAYOUT.domain.base.hud),
-      lantern: uv(BOARD_LAYOUT.domain.base.lantern)     // 灯笼奖励区锚点（0–1）
+      lantern: uv(BOARD_LAYOUT.domain.base.lantern),    // 灯笼奖励区锚点（0–1）
+      resX: umap(BOARD_LAYOUT.domain.base.resX, u),
+      resY: BOARD_LAYOUT.domain.base.resY.map(u),
+      workerX: BOARD_LAYOUT.domain.base.workerX.map(u),
+      workerY: umap(BOARD_LAYOUT.domain.base.workerY, u),
+      crests: BOARD_LAYOUT.domain.base.crests.map(uv),
+      sealHud: {
+        x: u(BOARD_LAYOUT.domain.base.sealHud[0]),
+        y: u(BOARD_LAYOUT.domain.base.sealHud[1]),
+        w: u(BOARD_LAYOUT.domain.base.sealHud[2]),
+        h: u(BOARD_LAYOUT.domain.base.sealHud[3])
+      }
     }
   };
 
