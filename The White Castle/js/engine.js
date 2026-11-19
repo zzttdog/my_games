@@ -398,7 +398,9 @@ window.WCEngine = (function () {
   }
 
   /* 园丁行动：庭院卡不再绑定桥，可派到任意一张正面朝上的庭院卡
-     ★ 选项文案只写「条件 + 奖励」：付几食物 → 拿什么；不写庭院卡名。 */
+     ★ 2026-11-19：派遣只看食物。卡上「支付 N 钱」属于到达后的后续效果，
+       钱不够也能先把园丁派过去，只是跳过后续效果；钱够时由玩家选择是否执行。
+     选项文案只写「条件 + 奖励」，不写庭院卡名。 */
   function startGardener(g, p, _ctx) {
     const opts = [];
     for (const s of g.courtyard.slots) {
@@ -406,13 +408,15 @@ window.WCEngine = (function () {
       if (!card) continue;
       if (p.pools.gardener <= 0) break;
       if (p.res.food < card.food) continue;
-      /* ★ reward 里可能带「支付 N 钱」的负 coin 效果，是派遣园丁的前提条件，
-         而非可跳过的奖励。钱不够则整张庭院卡不可选（2026-11-01 修：钱不够仍执行园丁的缺口）。 */
-      const coinCost = (card.reward || []).reduce((acc, e) => acc + (e.op === 'gain' && e.what === 'coins' && e.n < 0 ? -e.n : 0), 0);
-      if (coinCost > 0 && p.coins < coinCost) continue;
       if (p.gardeners.some((x) => x.cardId === card.id)) continue;
+      /* 把 reward 里的负钱拆出来只用于文案提示；派遣本身不再检查钱。 */
+      const coinCost = (card.reward || []).reduce((acc, e) => acc + (e.op === 'gain' && e.what === 'coins' && e.n < 0 ? -e.n : 0), 0);
       const endTxt = card.end ? `（终局 ${card.end} 分）` : '';
-      opts.push({ id: card.id, label: `支付 ${card.food} 食物，${describeEffects(card.reward)}${endTxt}`, card, slot: s });
+      const rewardTxt = describeEffects(card.reward);
+      const label = coinCost
+        ? `支付 ${card.food} 食物派遣；到达后可选：${rewardTxt}${endTxt}`
+        : `支付 ${card.food} 食物，${rewardTxt}${endTxt}`;
+      opts.push({ id: card.id, label, card, slot: s, coinCost });
     }
     if (!opts.length) { pushLog(g, `${p.name} 无可派遣的庭院`, 'warn'); return false; }
     g.pending = { kind: 'gardener', playerId: p.id, options: opts };
@@ -420,7 +424,7 @@ window.WCEngine = (function () {
   }
   function resolveGardener(g, p, opt, rest, ctx) {
     const card = opt.card;
-    /* 付得起才执行：食物不足直接终止，不发奖励、不消耗园丁 */
+    /* 食物是唯一的派遣门槛；付了食物就把园丁放上去（终局分照算）。 */
     if (!pay(g, p, 'food', card.food)) {
       pushLog(g, `${p.name} 食物不足（需 ${card.food}），无法派遣园丁`, 'warn');
       g.awaitEnd = true;
@@ -431,7 +435,28 @@ window.WCEngine = (function () {
     const slotIdx = slot ? g.courtyard.slots.indexOf(slot) : -1;
     p.gardeners.push({ cardId: card.id, layer: slot ? slot.layer : null, idx: slot ? slot.idx : -1, row: slotIdx >= 0 ? Math.floor(slotIdx / 2) : -1 });
     pushLog(g, `${p.name} 派园丁到「${card.name}」`, 'act');
-    runEffects(g, p, (card.reward || []).concat(rest || []), ctx);
+
+    const reward = card.reward || [];
+    const coinCost = reward.reduce((acc, e) => acc + (e.op === 'gain' && e.what === 'coins' && e.n < 0 ? -e.n : 0), 0);
+    if (coinCost > 0) {
+      if (p.coins < coinCost) {
+        pushLog(g, `${p.name} 钱不足 ${coinCost}，园丁已派遣，跳过庭院后续效果`, 'warn');
+        runEffects(g, p, rest || [], ctx);
+        return;
+      }
+      /* 钱够：玩家可以选择执行（付钱并拿后续奖励）或不执行（只保留园丁）。 */
+      g.pending = {
+        kind: 'choose', playerId: p.id,
+        title: `园丁已派遣到「${card.name}」：是否执行后续效果？`,
+        options: [
+          { id: 0, label: `执行：${describeEffects(reward)}`, effects: reward },
+          { id: 1, label: '不执行，只保留园丁（终局分照算）', effects: [] }
+        ],
+        rest: rest || [], ctx: ctx || null
+      };
+      return;
+    }
+    runEffects(g, p, reward.concat(rest || []), ctx);
   }
 
   /* 训练场板块：areas 里扁平取出（含朝上面） */
@@ -1389,8 +1414,14 @@ window.WCEngine = (function () {
       if (!card) return;
       for (const pid of g.turnOrder) {
         const p = g.players[pid];
-        if (p.gardeners.some((x) => x.cardId === card.id))
-          q.push({ kind: 'auto', playerId: pid, effects: card.reward, note: `${p.name} 再激活庭院「${card.name}」（${bridge} 桥有剩骰）` });
+        if (!p.gardeners.some((x) => x.cardId === card.id)) continue;
+        /* 轮末再激活也遵守同一门槛：付不起卡上的钱，就不执行后续效果。 */
+        const coinCost = (card.reward || []).reduce((acc, e) => acc + (e.op === 'gain' && e.what === 'coins' && e.n < 0 ? -e.n : 0), 0);
+        if (coinCost > 0 && p.coins < coinCost) {
+          pushLog(g, `${p.name} 钱不足 ${coinCost}，庭院「${card.name}」本轮不再激活`, 'warn');
+          continue;
+        }
+        q.push({ kind: 'auto', playerId: pid, effects: card.reward, note: `${p.name} 再激活庭院「${card.name}」（${bridge} 桥有剩骰）` });
       }
     });
     g.roundEndQueue = q;

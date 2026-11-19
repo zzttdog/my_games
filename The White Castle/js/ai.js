@@ -70,12 +70,27 @@ window.WCAI = (function () {
     seals: 1.8,       // 1 家纹值多少（家纹能换任意资源，比钱更值钱）
     resProg: 4.0,     // 资源「距下一阶梯还差多少」的权重
     lantern: 2.0,     // 灯笼区图标总价值（每回合左端骰都会结算一次）
-    clan: 2.0,        // 幕僚梯子层数
-    pieces: 1.5,      // 已派出的武士 / 园丁
+    clan: 2.0,        // 幕僚梯子层数（家臣）
+    pieces: 1.5,      // 兼容旧权重：已派出的武士 / 园丁
+    samurai: 1.5,     // 已派出的武士（普通档默认与 pieces 同权）
+    gardener: 1.5,    // 已派出的园丁（普通档默认与 pieces 同权）
     gardenPot: 3.0,  // 庭院卡可拿性（食物还能派园丁）
     inflGap: 1.2,     // 影响力「离下一个检查点还差几格」
     time: 3.5         // 影响力离下一档终局分的进度（6/11/15 档）
   };
+
+  /* 困难档：用户 2026-11-19 反馈「庭院权重过高」。
+     把食物/园丁潜力压低，把权重转到武士和家臣（幕僚梯子）；
+     普通档仍使用上面的 W，不受影响。 */
+  PRESET.hard.weights = Object.assign({}, W, {
+    gardenPot: 0.8,
+    gardener: 0.6,
+    samurai: 4.2,
+    clan: 3.4
+  });
+  /* 困难档在「选人行动」时再给一点方向：少选园丁，多选武士/家臣。
+     只影响 pending 选项的排序，不改变普通档。 */
+  PRESET.hard.actionBias = { gardener: -4, samurai: 4, retainer: 4 };
 
   /* 稳定伪随机：同一局面同一候选 → 同一抖动 */
   function hash01(s) {
@@ -115,8 +130,10 @@ window.WCAI = (function () {
     /* 钱 / 家纹：可换分。家纹还能随时换资源，所以比钱略贵 */
     v += p.coins * w.coins + p.seals * w.seals;
 
-    /* 已派出的家族成员：终局乘算的底座 */
-    v += (p.samuraiTiles.length + p.gardeners.length) * w.pieces;
+    /* 已派出的家族成员：武士 / 家臣 / 园丁分开加权。
+       困难档把庭院（园丁）权重压低，武士和家臣权重抬高。 */
+    v += p.samuraiTiles.length * (w.samurai != null ? w.samurai : w.pieces);
+    v += p.gardeners.length * (w.gardener != null ? w.gardener : w.pieces);
 
     /* 庭院卡可拿性：手里有食物就还派得出园丁，食物越多这项潜力越大 */
     v += Math.min(p.res.food, 5) * w.gardenPot;
@@ -188,7 +205,7 @@ window.WCAI = (function () {
   }
 
   /* 把 pending 链按同一估值解完；只接管自己的待决，最多 depth 层 */
-  function resolveChain(g, pid, depth, lite, weights) {
+  function resolveChain(g, pid, depth, lite, weights, P) {
     let d = 0;
     while (g.pending && d++ < depth) {
       if (g.pending.playerId !== pid) break;
@@ -199,7 +216,7 @@ window.WCAI = (function () {
       opts.forEach((c, i) => {
         const g3 = clone({ ...g, snapshots: [], log: [] });
         try { E.apply(g3, c); } catch (e) { return; }
-        const v = evaluate(g3, pid, lite, weights) + jitter(g, c, i) * 1.2;
+        const v = evaluate(g3, pid, lite, weights) + jitter(g, c, i) * 1.2 + actionChoiceBias(g, c, P);
         if (v > bestV) { bestV = v; best = c; }
       });
       if (!best) break;
@@ -225,6 +242,24 @@ window.WCAI = (function () {
     return b;
   }
 
+  /* 正在选「园丁 / 武士 / 家臣」时，按难度参数给选项加一点偏好。
+     园丁选项本身是具体庭院卡；武士是训练区域；家臣是晋升选项。
+     普通档没有 actionBias，完全不受影响。 */
+  function actionChoiceBias(g, cmd, P) {
+    if (!P || !P.actionBias || !g.pending || cmd.type !== 'choose') return 0;
+    const pd = g.pending;
+    let kind = null;
+    if (pd.kind === 'gardener') kind = 'gardener';
+    else if (pd.kind === 'samurai') kind = 'samurai';
+    else if (pd.kind === 'retainer') kind = 'retainer';
+    else {
+      const opt = pd.options && pd.options[+cmd.optionId];
+      const act = opt && (opt.effects || []).find((e) => e && e.op === 'action');
+      if (act) kind = act.kind;
+    }
+    return kind && P.actionBias[kind] ? P.actionBias[kind] : 0;
+  }
+
   function bestPlacementValue(g2, pid, P) {
     if (!g2.inHand) return null;
     const opts = E.legalCommands(g2).filter((c) => c.type === 'placeDie');
@@ -233,7 +268,7 @@ window.WCAI = (function () {
     opts.forEach((cmd, i) => {
       const g3 = clone({ ...g2, snapshots: [], log: [] });
       try { E.apply(g3, cmd); } catch (e) { return; }
-      resolveChain(g3, pid, P.chain, P.lite, P.weights);
+      resolveChain(g3, pid, P.chain, P.lite, P.weights, P);
       let v = evaluate(g3, pid, P.lite, P.weights) + placementBias(cmd, P);
       if (P.opp > 0) v -= P.opp * opponentBest(g3, pid);
       if (P.jitter > 0) v += jitter(g2, cmd, i) * P.jitter * 0.35;
@@ -302,9 +337,9 @@ window.WCAI = (function () {
     list.forEach((cmd, i) => {
       const g2 = clone({ ...g, snapshots: [], log: [] });
       try { E.apply(g2, cmd); } catch (e) { return; }
-      resolveChain(g2, pid, P.chain, P.lite);
+      resolveChain(g2, pid, P.chain, P.lite, P.weights, P);
 
-      let v = candidateValue(g2, pid, P, cmd);
+      let v = candidateValue(g2, pid, P, cmd) + actionChoiceBias(g, cmd, P);
       if (P.jitter > 0) v += jitter(g, cmd, i) * P.jitter; // 随机抖动
       scored.push({ cmd, v, g2 });
     });
