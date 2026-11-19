@@ -359,7 +359,7 @@
       const resCubes = ['food', 'iron', 'pearl'].map((r) => {
         const n = Math.max(0, Math.min(7, Number(p.res && p.res[r]) || 0));
         const col = D.RESOURCES[r] || { hex: '#8b8172', name: r };
-        return `<span class="presource" style="left:${pct(A.resX[r])};top:${pct(A.resY[n])};--rc:${col.hex}" title="${esc(col.name)} ${n}/7"></span>`;
+        return `<span class="presource" style="left:${pct(A.resX[r])};top:${pct(A.resY[n])};--rc:${p.color.hex}" title="${esc(col.name)} ${n}/7"></span>`;
       }).join('');
 
       const WORKER_ROWS = [['clan', '家臣'], ['gardener', '园丁'], ['samurai', '武士']];
@@ -665,42 +665,21 @@
     }
   });
 
-  /* ── 状态栏按钮（兑换 / 撤销）注入 ────────────────────── */
+  /* ── 状态栏按钮（撤销 / 结束回合；兑换已收进个人领地的家纹排，不再重复） ── */
   const origStatus = renderStatus;
   renderStatus = function (g) {
     origStatus(g);
     if (isHumanTurn(g) && g.phase === 'play' && !g.pending) {
       const cs = cmdSets(g);
-      const btns = cs.exchange.map((c) => `<button class="ghost" data-exchange="${c.id}" style="padding:4px 9px;font-size:10px">${esc(c.label)}</button>`).join('');
       const undo = cs.canUndo ? `<button class="ghost" data-undo style="padding:4px 9px;font-size:10px">撤销</button>` : '';
-    const endBtn = cs.cmds.some((c) => c.type === 'endTurn') ? `<button class="ghost" data-end style="padding:4px 9px;font-size:10px">结束回合</button>` : '';
-      if (btns || undo || endBtn) $('#status').innerHTML += `<span style="display:inline-flex;gap:5px;margin-left:8px">${btns}${undo}${endBtn}</span>`;
+      const endBtn = cs.cmds.some((c) => c.type === 'endTurn') ? `<button class="ghost" data-end style="padding:4px 9px;font-size:10px">结束回合</button>` : '';
+      if (undo || endBtn) $('#status').innerHTML += `<span style="display:inline-flex;gap:5px;margin-left:8px">${undo}${endBtn}</span>`;
     } else if (g.snapshots.length && isHumanTurn(g)) {
       const cs2 = cmdSets(g);
-      const exBtns2 = cs2.exchange.map((c) => `<button class="ghost" data-exchange="${c.id}" style="padding:4px 9px;font-size:10px">${esc(c.label)}</button>`).join('');
       const endBtn2 = cs2.cmds.some((c) => c.type === 'endTurn') ? `<button class="ghost" data-end style="padding:4px 9px;font-size:10px">结束回合</button>` : '';
-      $('#status').innerHTML += `<span style="display:inline-flex;gap:5px;margin-left:8px">${exBtns2}${endBtn2}<button class="ghost" data-undo style="padding:4px 9px;font-size:10px">撤销</button></span>`;
+      $('#status').innerHTML += `<span style="display:inline-flex;gap:5px;margin-left:8px">${endBtn2}<button class="ghost" data-undo style="padding:4px 9px;font-size:10px">撤销</button></span>`;
     }
   };
-
-  /* ── 规则 / 棋盘弹窗 ──────────────────────────────────── */
-  function showStatic(title, bodyHtml) {
-    $('#modalRoot').innerHTML = `<div class="modal"><div class="panel-head"><h3>${esc(title)}</h3></div>
-      <div style="overflow:auto;padding:12px;font-size:12px;line-height:1.8">${bodyHtml}</div>
-      <div style="padding:10px"><button class="ghost" style="width:100%" onclick="document.getElementById('modalRoot').classList.add('hidden')">关闭</button></div></div>`;
-    $('#modalRoot').classList.remove('hidden');
-  }
-  $('#btnRules').addEventListener('click', () => showStatic('规则速查', `
-    <p><b>回合</b>：取桥上左/右端骰子 → 放到版图上的一个栏位。左端＝最小骰：<b>取走时</b>先结算个人领地灯笼区全部图标（含影响力前进），结算完再放骰；右端两项都不触发。</p>
-    <p><b>差值</b>：骰点比所盖数值（印刷值或下层骰点）大 → 收差值钱；小 → 付差值钱。水井恒为 1。</p>
-    <p><b>放骰区域</b>：城堡 6 房（骰色须命中房内方块；天守阁无板块，任意骰色）／墙外 2 栏（二选一）／水井（不限骰数）／城郊 5 格（放骰＝拿走这张卡当行动卡，执行该骰色那一列，旧行动卡翻面进灯笼区）／个人领地 3 队列。训练场不放骰子。</p>
-    <p><b>家纹</b>：随时可兑换 —— 2 家纹换 1 个任选资源、1 家纹换 1 钱。选择弹窗里也能换（换完自动回到刚才那个选择）。</p>
-    <p><b>轮末</b>：桥上剩 3 颗骰时结束本轮：按影响力重排顺位（同格按堆叠）→ 庭院再激活 → 收骰重掷。共 3 轮，每轮每人 3 回合。</p>
-    <p><b>终局</b>：资源(3 个 1 分 / 7 个 2 分) + 时间轨季节分(0/3/6/10–15) + 家臣层级(1/3/6/10) + 武士价值×城堡内家臣数 + 庭院卡金扇子 + 红扇 + (钱+纹)/5。</p>`));
-  $('#btnBoard').addEventListener('click', () => showStatic('版图原图', `
-    <p style="opacity:.7">基础版图</p><img src="assets/${assetSrc('board-base-web.jpg')}" style="width:100%"${fallbackAttr}>
-    <p style="opacity:.7">个人领地</p><img src="assets/${assetSrc('domain-base-web.jpg')}" style="width:100%"${fallbackAttr}>`));
-  $('#btnRestart').addEventListener('click', () => { if (confirm('重开一局？')) { endShown = false; showSetup(); } });
 
   /* ── 版图缩放：用 CSS 变量 --board-scale 控制 .bwrap 宽度，整张版图（含骰位叠层）等比缩放 ── */
   const ZOOM_KEY = 'himeji-board-scale';
