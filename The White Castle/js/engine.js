@@ -192,7 +192,10 @@ window.WCEngine = (function () {
       const res = applyOne(g, p, e, ctx);
       if (res === 'abort') return true;   // 效果链中断 = 本动作结束（不是挂起）
       if (res) {
-        g.pending.rest = list.slice(i + 1);
+        /* 一个特殊效果内部也可能先挂起（例如水井图标的「任选资源」），
+           它已经把自己剩余的图标放到 pending.rest；这里把外层效果接在后面，
+           不能直接覆盖，否则会丢掉内层待结算效果。 */
+        g.pending.rest = (g.pending.rest || []).concat(list.slice(i + 1));
         g.pending.ctx = ctx || null;
         return false;
       }
@@ -229,7 +232,7 @@ window.WCEngine = (function () {
   /* applyOne 返回 true = 已挂起（g.pending 已设置） */
   function applyOne(g, p, e, ctx) {
     switch (e.op) {
-      case 'special': return applySpecial(g, p, e);
+      case 'special': return applySpecial(g, p, e, ctx);
       case 'gain': {
         const ok = gain(g, p, e.what, e.n);
         if (ok === false) {
@@ -952,21 +955,35 @@ window.WCEngine = (function () {
     pushLog(g, `${p.name} 获得「${card.name || card.id}」，放入个人版图行动区`, 'act');
   }
   /* ── 「特殊效果」算子：把数据表里的文字效果落成真实行为 ── */
-  function applySpecial(g, p, e) {
+  function applySpecial(g, p, e, ctx) {
     const note = String(e.note || '');
     const pick = (options, label) => {
       if (!options.length) return false;
       g.pending = { kind: 'choose', playerId: p.id, options, title: label };
       return true;
     };
-    /* 水井效果：1 家纹 + 格 11/12 的图标 */
+    /* 水井效果：1 家纹 + 格 11/12 的图标
+       ★ 图标里可能有「任选基础资源」。这里必须把图标逐项交给 applyOne，
+       遇到 gainAny / timeMove 立即挂起并 return true；否则后续图标或外层效果
+       会继续执行，把已经挂起的 gainAny 覆盖掉，玩家就看不到选资源弹窗。 */
     if (note.indexOf('水井') >= 0) {
       gain(g, p, 'seals', 1);
+      const iconFx = [];
       for (const t of (g.well.icons || [])) {
-        if (t === 'anyBase') g.pending = { kind: 'gainAny', playerId: p.id, pool: ['iron', 'food', 'pearl'], n: 1 };
-        else if (t === 'time') moveTime(g, p, 1);
-        else if (t === 'redFan') p.redFan += 1;
-        else gain(g, p, t, 1);
+        if (t === 'anyBase') iconFx.push({ op: 'gainAny', pool: ['iron', 'food', 'pearl'], n: 1 });
+        else if (t === 'time') iconFx.push({ op: 'time', n: 1 });
+        else if (t === 'redFan') iconFx.push({ op: 'fan', kind: 'red', n: 1 });
+        else iconFx.push({ op: 'gain', what: t, n: 1 });
+      }
+      for (let i = 0; i < iconFx.length; i++) {
+        const r = applyOne(g, p, iconFx[i], ctx);
+        if (g.pending) {
+          /* 先挂起的选项（任选资源/影响力检查点）负责把剩下的图标继续结算完。 */
+          g.pending.rest = (g.pending.rest || []).concat(iconFx.slice(i + 1));
+          pushLog(g, `${p.name} 结算水井效果（+1 家纹 + ${(g.well.icons || []).join('/')}）`, 'act');
+          return true;
+        }
+        if (r === 'abort') break;
       }
       pushLog(g, `${p.name} 结算水井效果（+1 家纹 + ${(g.well.icons || []).join('/')}）`, 'act');
       return false;
@@ -1234,9 +1251,10 @@ window.WCEngine = (function () {
     if (kind === 'well') {
       settle(g.well, D.WELL.base, '水井', true);
       g.inHand = null;
-      /* 水井 = 1 家纹 + 格 11/12 的两个图标；统一走效果链，图标里若有「影响力」
-         也能正确弹出「付不付家纹」的选择 */
+      /* 水井 = 1 家纹 + 2 个板块收益（珍珠/铁）+ 格 11/12 的两个图标；
+         统一走效果链，图标里若有「影响力」也能正确弹出「付不付家纹」的选择 */
       const eff = [{ op: 'gain', what: 'seals', n: 1 }];
+      for (const t of D.WELL.tiles) eff.push({ op: 'gain', what: t, n: 1 });
       for (const t of (g.well.icons || [])) {
         if (t === 'redFan') eff.push({ op: 'fan', kind: 'red', n: 1 });
         else if (t === 'anyBase') eff.push({ op: 'gainAny', pool: ['iron', 'food', 'pearl'], n: 1 });
