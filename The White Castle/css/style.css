@@ -566,7 +566,7 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
   z-index: 2;
   width: 3.6cqw;
   height: 3.6cqw;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) rotate(45deg);   /* 领地资源孔是菱形，方块斜 45° 才对得上 */
   border: 1px solid rgba(255, 255, 255, .58);
   border-radius: 2px;
   background: var(--rc, #8b8172);
@@ -610,39 +610,22 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
 }
 .pseal-token img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* 右上角家纹 / 钱 / 兑换 HUD（家纹在左，钱在右） */
-.pseal-hud {
+/* 家纹这一排中间的兑换条；钱单独放右侧。
+   不再放家纹数字（顶部 5 个 mk8 槽本身就能数），也不往下压成员格。 */
+.pexchange-hud {
   position: absolute;
   z-index: 9;
   box-sizing: border-box;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: .9cqw;
-  padding: 1.0cqw 1.1cqw;
-  border: 1px solid rgba(201, 164, 95, .42);
-  border-radius: 4px;
-  background: rgba(10, 8, 7, .84);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, .32);
-  color: #f0e4c8;
-}
-.pseal-hud-main { display: flex; align-items: center; gap: 1.5cqw; }
-.phud {
-  display: inline-flex;
   align-items: center;
-  gap: .5cqw;
-  font-size: clamp(7px, 2.2cqw, 12px);
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
+  justify-content: center;
+  padding: .4cqw .5cqw;
+  border: 1px solid rgba(201, 164, 95, .38);
+  border-radius: 4px;
+  background: rgba(10, 8, 7, .78);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .26);
 }
-.phud img {
-  width: clamp(14px, 4.1cqw, 24px);
-  height: clamp(14px, 4.1cqw, 24px);
-  object-fit: contain;
-  border-radius: 50%;
-}
-.pseal-ex { display: flex; gap: .55cqw; }
+.pseal-ex { display: flex; gap: .55cqw; width: 100%; }
 .pex-btn {
   flex: 1 1 0;
   min-width: 0;
@@ -662,6 +645,32 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
 .pex-btn span:last-child { font-size: .92em; opacity: .92; }
 .pex-btn:hover { background: rgba(201, 164, 95, .42); }
 .pex-btn:disabled { opacity: .55; cursor: default; }
+
+/* 右侧钱数：mk5 + 实时数量 */
+.pmoney-hud {
+  position: absolute;
+  z-index: 9;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4cqw;
+  padding: .35cqw .45cqw;
+  border: 1px solid rgba(201, 164, 95, .38);
+  border-radius: 4px;
+  background: rgba(10, 8, 7, .78);
+  color: #f0e4c8;
+  font-size: clamp(7px, 2.3cqw, 12px);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+.pmoney-hud img {
+  width: clamp(14px, 4.1cqw, 24px);
+  height: clamp(14px, 4.1cqw, 24px);
+  object-fit: contain;
+  border-radius: 50%;
+}
 
 /* 三条队列上的骰子（位置来自 data.js 的 domain.rows / dieX） */
 .pdice { position: absolute; transform: translate(-50%, -50%); }

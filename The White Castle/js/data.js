@@ -536,7 +536,9 @@ window.WCData = (function () {
         workerX: [50.7, 56.2, 61.7, 67.2, 72.7],
         workerY: { clan: 23.0, gardener: 40.2, samurai: 57.0 },
         crests: [[7.1, 8.5], [17.6, 8.5], [28.2, 8.5], [38.8, 8.5], [49.4, 8.5]],
-        sealHud: [54.8, 1.7, 29.8, 14.5]
+        /* 家纹数量只看顶部 5 个槽；兑换条放家纹这一排中间，钱放右边，避免往下压住成员格 */
+        exchangeHud: [55.2, 2.9, 21.8, 11.5],
+        moneyHud: [79.0, 3.3, 8.2, 8.8]
       }
     }
   };
@@ -573,12 +575,8 @@ window.WCData = (function () {
       workerX: BOARD_LAYOUT.domain.base.workerX.map(u),
       workerY: umap(BOARD_LAYOUT.domain.base.workerY, u),
       crests: BOARD_LAYOUT.domain.base.crests.map(uv),
-      sealHud: {
-        x: u(BOARD_LAYOUT.domain.base.sealHud[0]),
-        y: u(BOARD_LAYOUT.domain.base.sealHud[1]),
-        w: u(BOARD_LAYOUT.domain.base.sealHud[2]),
-        h: u(BOARD_LAYOUT.domain.base.sealHud[3])
-      }
+      exchangeHud: uv(BOARD_LAYOUT.domain.base.exchangeHud),
+      moneyHud: uv(BOARD_LAYOUT.domain.base.moneyHud)
     }
   };
 

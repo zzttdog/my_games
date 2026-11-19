@@ -374,19 +374,20 @@
         ? `<span class="pseal-token" style="left:${pct(xy[0])};top:${pct(xy[1])}"><img src="assets/${assetSrc('tiles/mk8.png')}" alt="家纹"${fallbackAttr}></span>`
         : '').join('');
 
-      const showExchange = !p.isAI && (p.id === cur || g.phase === 'draft');
+      const showExchange = !p.isAI;
       const canUseExchange = p.id === cur;
       const canRes = canUseExchange && (Number(p.seals) || 0) >= 2;
       const canCoin = canUseExchange && (Number(p.seals) || 0) >= 1;
-      const sealHud = `<div class="pseal-hud" style="left:${pct(A.sealHud.x)};top:${pct(A.sealHud.y)};width:${pct(A.sealHud.w)};min-height:${pct(A.sealHud.h)}">
-        <div class="pseal-hud-main">
-          <span class="phud" title="家纹 ${p.seals}/5"><img src="assets/${assetSrc('tiles/mk8.png')}" alt=""${fallbackAttr}><b>${p.seals}</b></span>
-          <span class="phud" title="钱 ${p.coins}"><img src="assets/${assetSrc('tiles/mk5.png')}" alt=""${fallbackAttr}><b>${p.coins}</b></span>
-        </div>
-        ${showExchange ? `<div class="pseal-ex">
+      /* 家纹数量不再写数字：顶部 5 个 mk8 槽已经能数。兑换条放在家纹这一排中间；
+         钱单独放右侧，避免像上一版那样往下压住 5 个成员格。 */
+      const exchangeHud = showExchange ? `<div class="pexchange-hud" style="left:${pct(A.exchangeHud[0])};top:${pct(A.exchangeHud[1])};width:${pct(A.exchangeHud[2])}">
+        <div class="pseal-ex">
           <button class="pex-btn" data-exchange="seal2res" ${canRes ? '' : 'disabled'} title="2 家纹换 1 个自选资源"><span>2纹</span><span>换资源</span></button>
           <button class="pex-btn" data-exchange="seal2coin" ${canCoin ? '' : 'disabled'} title="1 家纹换 1 钱"><span>1纹</span><span>换钱</span></button>
-        </div>` : ''}
+        </div>
+      </div>` : '';
+      const moneyHud = `<div class="pmoney-hud" style="left:${pct(A.moneyHud[0])};top:${pct(A.moneyHud[1])};width:${pct(A.moneyHud[2])}" title="钱 ${p.coins}">
+        <img src="assets/${assetSrc('tiles/mk5.png')}" alt=""${fallbackAttr}><b>${p.coins}</b>
       </div>`;
 
       /* ── 灯笼奖励区（★ 位置/尺寸改这里）──────────────────────────────
@@ -472,7 +473,7 @@
           <img class="pimg" src="assets/${assetSrc(A.img)}" alt="个人领地"${fallbackAttr}>
           ${resCubes}${workerDots}${sealTokens}${qdice}${cardHtml}${domSlots}
           ${lanCards ? `<div class="plantern-strip" style="left:${pct(LANT[0])};top:${pct(LANT[1])};right:1.2%">${lanCards}</div>` : ''}
-          ${sealHud}
+          ${exchangeHud}${moneyHud}
         </div>
         <div class="gcards">${frontCards}</div>
         ${lanternCards ? `<div class="gcards glantern"><span class="glan-title">灯笼区</span>${lanternCards}</div>` : ''}
