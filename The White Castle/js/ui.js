@@ -365,7 +365,7 @@
       const WORKER_ROWS = [['clan', '家臣'], ['gardener', '园丁'], ['samurai', '武士']];
       const workerDots = WORKER_ROWS.map(([pool, label]) => {
         const n = Math.max(0, Math.min(5, Number(p.pools && p.pools[pool]) || 0));
-        return A.workerX.map((x, i) => i < n
+        return A.workerX.map((x, i) => i >= 5 - n
           ? `<span class="pworker-dot" style="left:${pct(x)};top:${pct(A.workerY[pool])};--pc:${p.color.hex}" title="${esc(label)}：池中剩余 ${n}/5"></span>`
           : '').join('');
       }).join('');
