@@ -564,8 +564,8 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
 .presource {
   position: absolute;
   z-index: 2;
-  width: 3.6cqw;
-  height: 3.6cqw;
+  width: 3.2cqw;
+  height: 3.2cqw;
   transform: translate(-50%, -50%) rotate(45deg);   /* 领地资源孔是菱形，方块斜 45° 才对得上 */
   border: 1px solid rgba(255, 255, 255, .58);
   border-radius: 2px;
