@@ -202,7 +202,7 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 12px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .stage { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
@@ -222,7 +222,16 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
   gap: 10px;
 }
 
-.side { position: sticky; top: 10px; }
+/* 右侧栏与左侧「版图 + 个人面板」同高；记录区只吃剩余高度，
+   不再用 100vh 把自己拉到个人面板下面。 */
+.side {
+  position: sticky;
+  top: 10px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  align-self: stretch;
+}
 
 
 /* ═══ 05 主版图（实拍底图 + 叠层）══════════════════════════════════════
@@ -864,19 +873,27 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
 }
 .log-wrap h3 span { margin-left: 5px; font-size: 8px; letter-spacing: 0.2em; opacity: 0.45; }
 
-/* 右侧栏里的记录框占满剩余高度 */
-.side .log-wrap { margin-top: 0; max-height: calc(100vh - 90px); }
+/* 右侧栏里的记录框占用「玩家数据」下方的剩余高度，底部与个人面板对齐 */
+.side .log-wrap { margin-top: 0; }
+.side .stats-wrap { flex: 0 0 auto; }
+.side .log-wrap:not(.stats-wrap) {
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: none;
+}
 .side .stats-wrap + .log-wrap { margin-top: 10px; }
 .stats-wrap { max-height: none; }
 
 .log {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding: 5px 0 8px;
   font-size: 9.5px;
   scrollbar-width: thin;
   scrollbar-color: rgba(201, 164, 95, 0.3) transparent;
 }
-.side .log { max-height: calc(100vh - 140px); font-size: 9.5px; }
+.side .log { max-height: none; font-size: 9.5px; }
 .log::-webkit-scrollbar { width: 5px; }
 .log::-webkit-scrollbar-thumb { background: rgba(201, 164, 95, 0.25); border-radius: 3px; }
 
@@ -1116,15 +1133,15 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
   #app { padding: 10px 10px 40px; }
   .topbar { flex-wrap: wrap; gap: 10px; }
   .status { order: 3; flex-basis: 100%; }
-  .game { grid-template-columns: 1fr; }
-  .side { position: static; order: 3; }
+  .game { grid-template-columns: 1fr; align-items: start; }
+  .side { position: static; order: 3; display: block; align-self: auto; }
   .players { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   /* 手机设置页：不要整屏底图，也不要 100vh 把设置卡推到页面中段 */
   .setup { min-height: 0; display: block; padding: 10px; border: 0; background: #0d0b0a; }
   .setup-card { width: 100%; margin: 8px auto 18px; }
   /* 手机记录区独立滚动，不再把整页拉长 */
-  .side .log-wrap:not(.stats-wrap) { max-height: 38vh; }
-  .side .log-wrap:not(.stats-wrap) .log { max-height: calc(38vh - 34px); }
+  .side .log-wrap:not(.stats-wrap) { flex: none; max-height: 38vh; }
+  .side .log-wrap:not(.stats-wrap) .log { flex: none; max-height: calc(38vh - 34px); }
 }
 
 @media (max-width: 620px) {
