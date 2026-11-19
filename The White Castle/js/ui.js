@@ -495,6 +495,7 @@
 
   /* ── pending 弹窗 ─────────────────────────────────────── */
   let pendingShownFor = null;
+  let peekPending = false;
   function renderPending(g) {
     const root = $('#modalRoot');
     if (g.phase === 'gameEnd') return;
@@ -504,11 +505,13 @@
          已经完成后弹窗还留在屏幕上。 */
       if (pendingShownFor !== null) closeModal();
       pendingShownFor = null;
+      peekPending = false;
       return;
     }
     const key = JSON.stringify([pd.kind, pd.playerId, (pd.options || pd.pool || pd.pairs || []).length, pd.n || '', g.log.length]);
     if (pendingShownFor === key) return;
     pendingShownFor = key;
+    peekPending = false;
     const allCmds = E.legalCommands(g);
     /* ★ 只把「选择」类命令做成选项按钮：兑换/撤销另有按钮，
        否则会多出几个点了没反应的空按钮。 */
@@ -548,12 +551,11 @@
     });
     const pb = root.querySelector('#peekBtn');
     if (pb) pb.addEventListener('click', () => {
+      /* 不生成底部浮动按钮：查看版图时把「继续选择」放到顶部状态栏，
+         紧挨着撤销，避免手机上还要滑到底部去点。 */
+      peekPending = true;
       root.classList.add('hidden');
-      const fab = document.createElement('button');
-      fab.textContent = '继续选择 ▸';
-      fab.className = 'ghost fab';
-      fab.addEventListener('click', () => { fab.remove(); root.classList.remove('hidden'); });
-      document.body.appendChild(fab);
+      if (typeof renderStatus === 'function') renderStatus(S.g);
     });
     root.classList.remove('hidden');
     root.querySelectorAll('[data-opt]').forEach((btn) => btn.addEventListener('click', () => {
@@ -563,7 +565,7 @@
       E.apply(S.g, cmd); render(); drive();
     }));
   }
-  function closeModal() { $('#modalRoot').classList.add('hidden'); $('#modalRoot').innerHTML = ''; }
+  function closeModal() { peekPending = false; $('#modalRoot').classList.add('hidden'); $('#modalRoot').innerHTML = ''; }
 
   /* ── 终局 ─────────────────────────────────────────────── */
   let endShown = false;
@@ -658,6 +660,11 @@
       pendingShownFor = null;
       render(); drive(); return;
     }
+    if (ev.target.closest('[data-resume-peek]')) {
+      peekPending = false;
+      pendingShownFor = null;
+      render(); drive(); return;
+    }
     if (ev.target.closest('[data-end]')) { E.apply(g, { type: 'endTurn' }); render(); drive(); return; }
     if (ev.target.closest('[data-undo]')) {
       if (!isHumanTurn(g) || g.pending) return;
@@ -678,6 +685,9 @@
       const cs2 = cmdSets(g);
       const endBtn2 = cs2.cmds.some((c) => c.type === 'endTurn') ? `<button class="ghost" data-end style="padding:4px 9px;font-size:10px">结束回合</button>` : '';
       $('#status').innerHTML += `<span style="display:inline-flex;gap:5px;margin-left:8px">${endBtn2}<button class="ghost" data-undo style="padding:4px 9px;font-size:10px">撤销</button></span>`;
+    }
+    if (peekPending) {
+      $('#status').innerHTML += `<button class="ghost" data-resume-peek style="padding:4px 9px;font-size:10px;margin-left:6px">继续选择 ▸</button>`;
     }
   };
 
