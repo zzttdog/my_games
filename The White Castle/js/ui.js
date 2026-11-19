@@ -92,7 +92,7 @@
       else if (c.type === 'exchange') exchange.push(c);
       else if (c.type === 'undo') canUndo = true;
     }
-    return { cmds, take, place, exchange, canUndo };
+    return { cmds, take, place, exchange, canUndo, canRewind: !!(E.canUndoTurn && E.canUndoTurn(g)) };
   }
   const isHumanTurn = (g) => {
     if (!g || g.phase === 'gameEnd') return false;
@@ -519,6 +519,7 @@
     const exCmds = allCmds.filter((c) => c.type === 'exchange');
     /* ★ 撤销：选择界面里也要能用（以前只在状态栏，pending 时被隐藏，选到一半退不回去） */
     const canUndo = allCmds.some((c) => c.type === 'undo');
+    const canRewind = !!(E.canUndoTurn && E.canUndoTurn(g));
     /* 弹窗标题也按「条件 + 效果」写，不写地点名 */
     const baseTitle = { draft: '开局选卡：选一对（资源卡入灯笼区，行动卡入领地）', gainAny: '选择资源', choose: '选择一项', orderPick: '选择结算顺序（先结算哪一项效果）', retainer: '家臣行动：支付珍珠晋升 / 支付钱进城门', promoteRoom: '晋升：选择浅色效果', gardener: '园丁行动：支付食物，获得奖励', samurai: '武士行动：支付铁，获得奖励', domainPick: '领地行动：选择一色，获得奖励', castle: '城堡行动', outskirtGain: '城郊窗帘：选择一色', trainYellow: '训练场黄面奖励', trainBlue: '训练场蓝面行动', gardenGain: '庭院奖励', wallPick: '墙外：选 1 个行动' }[pd.kind] || '选择';
     /* 任选 N 资源会连着弹 N 次；把「还需几个」写进标题，避免看起来像同一张卡没反应。 */
@@ -538,7 +539,12 @@
     const exBar = exCmds.length
       ? `<div class="modal-ex"><span class="ex-lab">家纹兑换</span>${exCmds.map((c) => `<button class="ghost ex" data-ex="${c.id}">${esc(c.label)}</button>`).join('')}</div>`
       : '';
-    root.innerHTML = `<div class="modal"><div class="panel-head"><h3>${esc(title)}</h3>${canUndo ? '<button class="ghost" id="undoBtn" style="margin-left:auto;font-size:11px;padding:3px 8px">撤销</button>' : ''}<button class="ghost" id="peekBtn" style="margin-left:${canUndo ? '6px' : 'auto'};font-size:11px;padding:3px 8px">查看版图</button></div><div style="overflow:auto;padding:10px">${opts}${exBar}</div></div>`;
+    const modalTools = [
+      canUndo ? '<button class="ghost" id="undoBtn" style="font-size:11px;padding:3px 8px">撤销</button>' : '',
+      canRewind ? '<button class="ghost" id="undoTurnBtn" style="font-size:11px;padding:3px 8px">撤销至回合开始</button>' : ''
+    ].filter(Boolean).join('');
+    const modalToolsHtml = modalTools ? `<span style="margin-left:auto;display:inline-flex;gap:5px">${modalTools}</span>` : '';
+    root.innerHTML = `<div class="modal"><div class="panel-head"><h3>${esc(title)}</h3>${modalToolsHtml}<button class="ghost" id="peekBtn" style="margin-left:${modalTools ? '6px' : 'auto'};font-size:11px;padding:3px 8px">查看版图</button></div><div style="overflow:auto;padding:10px">${opts}${exBar}</div></div>`;
     root.querySelectorAll('[data-ex]').forEach((btn) => btn.addEventListener('click', () => {
       E.apply(S.g, { type: 'exchange', id: btn.getAttribute('data-ex') });
       pendingShownFor = null;
@@ -548,6 +554,11 @@
     if (ub) ub.addEventListener('click', () => {
       closeModal(); pendingShownFor = null;
       E.apply(S.g, { type: 'undo' }); render(); drive();
+    });
+    const ur = root.querySelector('#undoTurnBtn');
+    if (ur) ur.addEventListener('click', () => {
+      closeModal(); pendingShownFor = null;
+      E.apply(S.g, { type: 'undoTurn' }); render(); drive();
     });
     const pb = root.querySelector('#peekBtn');
     if (pb) pb.addEventListener('click', () => {
@@ -670,6 +681,10 @@
       if (!isHumanTurn(g) || g.pending) return;
       E.apply(g, { type: 'undo' }); render(); drive(); return;
     }
+    if (ev.target.closest('[data-rewind]')) {
+      if (!isHumanTurn(g)) return;
+      E.apply(g, { type: 'undoTurn' }); render(); drive(); return;
+    }
   });
 
   /* ── 状态栏按钮（撤销 / 结束回合；兑换已收进个人领地的家纹排，不再重复） ── */
@@ -679,12 +694,14 @@
     if (isHumanTurn(g) && g.phase === 'play' && !g.pending) {
       const cs = cmdSets(g);
       const undo = cs.canUndo ? `<button class="ghost" data-undo style="padding:4px 9px;font-size:10px">撤销</button>` : '';
+      const rewind = cs.canRewind ? `<button class="ghost" data-rewind style="padding:4px 9px;font-size:10px;white-space:nowrap">撤销至回合开始</button>` : '';
       const endBtn = cs.cmds.some((c) => c.type === 'endTurn') ? `<button class="ghost" data-end style="padding:4px 9px;font-size:10px">结束回合</button>` : '';
-      if (undo || endBtn) $('#status').innerHTML += `<span style="display:inline-flex;gap:5px;margin-left:8px">${undo}${endBtn}</span>`;
+      if (undo || rewind || endBtn) $('#status').innerHTML += `<span style="display:inline-flex;flex-wrap:wrap;gap:5px;margin-left:8px">${undo}${rewind}${endBtn}</span>`;
     } else if (g.snapshots.length && isHumanTurn(g)) {
       const cs2 = cmdSets(g);
       const endBtn2 = cs2.cmds.some((c) => c.type === 'endTurn') ? `<button class="ghost" data-end style="padding:4px 9px;font-size:10px">结束回合</button>` : '';
-      $('#status').innerHTML += `<span style="display:inline-flex;gap:5px;margin-left:8px">${endBtn2}<button class="ghost" data-undo style="padding:4px 9px;font-size:10px">撤销</button></span>`;
+      const rewind2 = cs2.canRewind ? `<button class="ghost" data-rewind style="padding:4px 9px;font-size:10px;white-space:nowrap">撤销至回合开始</button>` : '';
+      $('#status').innerHTML += `<span style="display:inline-flex;flex-wrap:wrap;gap:5px;margin-left:8px">${endBtn2}<button class="ghost" data-undo style="padding:4px 9px;font-size:10px">撤销</button>${rewind2}</span>`;
     }
     if (peekPending) {
       $('#status').innerHTML += `<button class="ghost" data-resume-peek style="padding:4px 9px;font-size:10px;margin-left:6px">继续选择 ▸</button>`;

@@ -698,6 +698,9 @@ window.WCEngine = (function () {
       players: [], bridges: {}, castle: null, courtyard: {}, training: null,
       well: { dice: [] }, wall: [], outskirts: null,
       inHand: null, pending: null, roundEndQueue: [],
+      /* 当前玩家「本回合开始」对应的快照下标；撤销至回合开始用。
+         值为 snapshots.length 时表示当前局面本身就是回合开始。 */
+      turnStartIdx: 0,
       log: [], snapshots: [], scores: null
     };
     g.rngState = g.seed;
@@ -914,6 +917,7 @@ window.WCEngine = (function () {
     pd.idx++;
     if (pd.idx >= g.config.playerCount) {
       g.pending = null; g.phase = 'play';
+      g.turnStartIdx = g.snapshots.length;   // 选卡结束后的局面 = 第一个回合开始
       pushLog(g, `第 1 轮开始`, 'round');
     } else { g.pending = pd; pd.playerId = pd.order[pd.idx]; }
   }
@@ -1397,6 +1401,7 @@ window.WCEngine = (function () {
     const target = 3;
     if (bridgeDiceLeft(g) <= target) return startRoundEnd(g);
     g.turnIdx = (g.turnIdx + 1) % g.turnOrder.length;
+    g.turnStartIdx = g.snapshots.length;      // 下一位玩家的回合从这里开始
   }
   function startRoundEnd(g) {
     g.phase = 'roundEnd';
@@ -1454,6 +1459,7 @@ window.WCEngine = (function () {
     g.round++;
     g.turnIdx = 0;
     g.phase = 'play';
+    g.turnStartIdx = g.snapshots.length;      // 新一轮第一位玩家的回合起点
     pushLog(g, `第 ${g.round} 轮开始`, 'round');
   }
 
@@ -1540,24 +1546,47 @@ window.WCEngine = (function () {
     g.snapshots = snaps;
     g.onUpdate = cb;
     snaps.push(s);
-    if (snaps.length > 400) snaps.shift();
+    if (snaps.length > 400) {
+      snaps.shift();
+      /* 丢弃最旧快照后，所有相对 snapshots 的下标都要前移一位。 */
+      if (g.turnStartIdx > 0) g.turnStartIdx--;
+    }
   }
-  function undo(g) {
-    if (!g.snapshots.length) return false;
-    const s = JSON.parse(g.snapshots.pop());
+  function restoreSnapshot(g, s) {
     const snaps = g.snapshots;
     const cb = g.onUpdate;
     for (const k of Object.keys(g)) delete g[k];
-    Object.assign(g, s);
+    Object.assign(g, JSON.parse(s));
     g.snapshots = snaps;
     g.onUpdate = cb;
     g._actor = null;                      // 撤销不算任何人的操作，日志不上色
+  }
+  function undo(g) {
+    if (!g.snapshots.length) return false;
+    const s = g.snapshots.pop();
+    restoreSnapshot(g, s);
     pushLog(g, '撤销一步', 'warn');
+    return true;
+  }
+  /* 撤销至当前玩家「回合开始」：只退本回合内的操作，不碰上一回合。 */
+  function canUndoTurn(g) {
+    if (!g || g.phase !== 'play' || !g.snapshots) return false;
+    return g.snapshots.length > Math.max(0, g.turnStartIdx || 0);
+  }
+  function undoTurn(g) {
+    if (!canUndoTurn(g)) return false;
+    const stop = Math.max(0, g.turnStartIdx || 0);
+    let s = null;
+    /* 逐条弹出但不逐条恢复；最终只恢复「回合开始」那一条，日志也只留一条。 */
+    while (g.snapshots.length > stop) s = g.snapshots.pop();
+    restoreSnapshot(g, s);
+    pushLog(g, '撤销至回合开始', 'warn');
     return true;
   }
 
   function apply(g, cmd) {
     if (cmd.type === 'undo') { undo(g); notify(g); return g; }
+    if (cmd.type === 'undoTurn') { undoTurn(g); notify(g); return g; }
     if (g.phase === 'gameEnd') return g;
     /* ★ 记下「这条命令是谁的」：日志上色（pushLog 读 g._actor）就靠它。
        行动中的连锁（弹窗选择、兑换、roundEnd 里按玩家跑的庭院再激活）
@@ -1707,7 +1736,7 @@ window.WCEngine = (function () {
   }
 
   return {
-    newGame, apply, legalCommands, undo, scoreBreakdown, describeEffects, lanternEffects, mergeEffects, lanternCardEffects,
+    newGame, apply, legalCommands, undo, undoTurn, canUndoTurn, scoreBreakdown, describeEffects, lanternEffects, mergeEffects, lanternCardEffects,
     assertInvariants, currentPlayer, inflScore,
     _test: { moveTime, wellGain, lanternEffects, dealDice }
   };
