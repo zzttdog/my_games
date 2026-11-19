@@ -56,8 +56,7 @@ window.WCAI = (function () {
        和 normal 完全一致，区别只在界面上给人一个「简单」的心理档位。 */
     easy:   { chain: 2, jitter: 2.0, opp: 0.00, randomPick: 0.00, ply2: 0, lite: 1, well: 0, exchange: false },
     normal: { chain: 8, jitter: 0.0, opp: 0.00, randomPick: 0.00, ply2: 0, lite: 0, well: 10, exchange: true, wallBias: 6, domainBias: 5 },
-    hard:   { chain: 8, jitter: 0.0, opp: 0.00, randomPick: 0.00, ply2: 0, lite: 0, well: 12, exchange: true, wallBias: 8, domainBias: 6,
-              weights: { total: 10, coins: 1.2, seals: 1.8, resProg: 4, lantern: 2, clan: 8, pieces: 10, gardenPot: 0, inflGap: 1.2, time: 1 } }
+    hard:   { chain: 8, jitter: 0.0, opp: 0.75, randomPick: 0.00, ply2: 0, lite: 0, well: 12, exchange: true, wallBias: 8, domainBias: 6 }
   };
 
   /* ── 估值权重（想调 AI 性格就改这里，数值越大越看重这一项）──
