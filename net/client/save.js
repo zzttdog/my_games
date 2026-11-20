@@ -14,8 +14,9 @@
  *
  * 已知需要剔除的字段（真实浏览器扫描结论）：
  *   · 姬路城 g.onUpdate —— 函数回调槽（engine.js notify() 会 typeof === 'function' 调用）
- *   · 姬路城 g.snapshots —— 撤销历史，最多 400 条 JSON 字符串，实测让状态膨胀到 ~500KB
- *     现在只把「本回合开始前 8 步 + 本回合全部快照」写进存档，刷新后仍能撤销/撤销至回合开始。
+ *   · 姬路城 g.snapshots —— 撤销历史，最多 400 条 JSON 字符串；局面存档里剔除，
+ *     单独写 mygames.save.castle.*.undo（只保「本回合开始前 8 步 + 本回合全部」），
+ *     刷新后仍能撤销/撤销至回合开始，又不会把局面存档撑到写不进去。
  *   · 自然和弦 G.undoStack / G.roundStart —— 联机下不存（与 bridge.js 的 DROP 一致）
  * ============================================================ */
 (function () {
@@ -40,6 +41,10 @@
   GAME = A.key;
 
   var KEY = 'mygames.save.' + A.key + '.' + MODE;  // 联机不绑房号 → 刷新后可续上
+  /* 撤销历史单独存一个键：局面存档保持很小，避免快照尾把 localStorage 配额顶满后
+     连「上一份完整存档」都写不进去；两个键用同一个 saveId 配对，防止旧快照套到新局面上。 */
+  var UNDO_KEY = KEY + '.undo';
+  var saveSeq = 0;
   var enabled = !NET;          // 联机等桥 init 完成后才启用，避免存到半初始化的状态
   var netMeta = null;
   var booted = false, bootPending = false;
@@ -108,7 +113,56 @@
   }
 
   /* ── localStorage 读写 ─────────────────────────────────── */
-  function clear() { try { localStorage.removeItem(KEY); } catch (e) {} lastSig = null; }
+  function clear() {
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    try { localStorage.removeItem(UNDO_KEY); } catch (e) {}
+    lastSig = null;
+  }
+
+  function newSaveId() {
+    saveSeq++;
+    return Date.now().toString(36) + '-' + saveSeq.toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+  }
+
+  /* 撤销历史和局面分开存：局面键很小，先确保动作落盘；快照单独写。
+     只有 saveId 对得上才接回，避免把上一局的撤销栈套到新局面上。 */
+  function readUndo(saveId) {
+    if (!saveId) return null;
+    try {
+      var raw = localStorage.getItem(UNDO_KEY);
+      if (!raw) return null;
+      var d = JSON.parse(raw);
+      if (!d || d.saveId !== saveId || !Array.isArray(d.snaps)) return null;
+      var snaps = d.snaps.filter(function (x) { return typeof x === 'string'; });
+      return { snaps: snaps, turnStartIdx: Math.max(0, Number(d.turnStartIdx) || 0) };
+    } catch (e) { return null; }
+  }
+
+  function storeUndo(saveId, tail) {
+    if (!tail || !tail.snaps || !tail.snaps.length) {
+      try { localStorage.removeItem(UNDO_KEY); } catch (e) {}
+      return;
+    }
+    var payload = JSON.stringify({
+      saveId: saveId,
+      snaps: tail.snaps,
+      turnStartIdx: Math.max(0, Number(tail.turnStartIdx) || 0)
+    });
+    try { localStorage.setItem(UNDO_KEY, payload); return; } catch (e) {
+      /* 配额不够时退成「只保最后一步」：刷新后仍能撤销刚点的那一下。 */
+      try {
+        var last = tail.snaps[tail.snaps.length - 1];
+        var o = JSON.parse(last);
+        o.turnStartIdx = 0;
+        o.snapshots = [];
+        last = JSON.stringify(o);
+        localStorage.removeItem(UNDO_KEY);
+        localStorage.setItem(UNDO_KEY, JSON.stringify({ saveId: saveId, snaps: [last], turnStartIdx: 1 }));
+      } catch (e2) {
+        try { console.warn('[存档] 撤销历史写入失败：' + (e && e.message)); } catch (e3) {}
+      }
+    }
+  }
 
   function netCfg() {
     if (netMeta && netMeta.cfg) return netMeta.cfg;
@@ -144,9 +198,10 @@
     return d;
   }
 
-  function store(st) {
+  function store(st, saveId) {
     var payload = {
       schema: SCHEMA, game: A.key, mode: MODE, savedAt: Date.now(),
+      saveId: saveId || null,
       opts: A.opts() || null, state: st
     };
     if (NET) payload.netCfgKey = cfgKey(netCfg());
@@ -389,19 +444,30 @@
       if (!st) return;
       var sig = JSON.stringify(st);
       if (sig === lastSig) return;      // 同一状态不重复落盘（双层包装时会调用两次）
-      lastSig = sig;
       try { replayObserve(st, sig); } catch (e) {}
-      store(st);
+      var saveId = newSaveId();
+      store(st, saveId);
+      var tail = A.tail ? A.tail() : null;
+      storeUndo(saveId, tail);
+      lastSig = sig;
     } catch (e) {
       /* setItem 是原子操作：写失败时绝不能把上一份完整存档删掉。
-         先重试一次「只保当前局面、不保撤销历史」，避免快照尾把配额顶满。 */
+         局面存档现在已不含快照；若仍被配额挡住，先挪走撤销键腾空间再重试一次。 */
       try {
         var st2 = A.plain();
         if (st2) {
-          st2.snapshots = [];
-          st2.turnStartIdx = 0;
-          store(st2);
-          lastSig = JSON.stringify(st2);
+          var oldUndo = null;
+          try { oldUndo = localStorage.getItem(UNDO_KEY); } catch (e3) {}
+          try { localStorage.removeItem(UNDO_KEY); } catch (e4) {}
+          try {
+            var fallbackId = newSaveId();
+            store(st2, fallbackId);
+            storeUndo(fallbackId, A.tail ? A.tail() : null);
+            lastSig = JSON.stringify(st2);
+          } catch (e2) {
+            if (oldUndo) { try { localStorage.setItem(UNDO_KEY, oldUndo); } catch (e5) {} }
+            throw e2;
+          }
         }
       } catch (e2) {
         try { console.warn('[存档] 写入失败，保留上一份存档：' + (e && e.message)); } catch (e3) {}
@@ -427,9 +493,11 @@
       if (!st) return;
       var sig = JSON.stringify(st);
       if (sig === lastSig) return;
-      lastSig = sig;
       try { replayObserve(st, sig); } catch (e) {}
-      store(st);
+      var saveId = newSaveId();
+      store(st, saveId);
+      storeUndo(saveId, A.tail ? A.tail() : null);
+      lastSig = sig;
     } catch (e) { /* 轮询绝不能影响游戏 */ }
   }
   function startPoll() {
@@ -531,7 +599,7 @@
       bootPending = false;
       if (!yes) { clear(); enabled = true; return; }
       try {
-        A.apply(d.state);
+        A.apply(d.state, d);
         if (d.opts) A.setOpts(d.opts);
         enabled = true;
         if (NET && netMeta && netMeta.publish) {
@@ -754,10 +822,12 @@
         if (!g) return null;
         var st = clean(g, DROP);
         if (!st) return null;
-        var tail = snapshotTail(g);
-        st.snapshots = tail.snaps;
-        st.turnStartIdx = tail.turnStartIdx;
+        /* 局面存档不带快照；快照单独写 UNDO_KEY，避免大 JSON 把配额顶满。 */
         return st;
+      },
+      tail: function () {
+        var g = state();
+        return g ? snapshotTail(g) : { snaps: [], turnStartIdx: 0 };
       },
       validate: function (s) {
         /* 只校验不可替代的骨架字段。g.castle / g.well 在 draft 阶段可能仍是 null，
@@ -769,13 +839,17 @@
       describe: function (s) { return '第 ' + (s.round || 1) + ' 轮 · ' + (s.players ? s.players.length : 0) + ' 人'; },
       opts: function () { try { return U().opts(); } catch (e) { return null; } },
       setOpts: function (o) { if (o && !NET) { try { U().setOpts(o); } catch (e) {} } },
-      apply: function (s) {
+      apply: function (s, meta) {
         var s2 = JSON.parse(JSON.stringify(s));
-        /* 恢复存档时把随档保存的撤销快照接回运行时；旧存档没有这个字段则退回空栈。
-           legalCommands() 直接读 g.snapshots.length，必须保证是数组。 */
-        var snaps = Array.isArray(s2.snapshots) ? s2.snapshots.filter(function (x) { return typeof x === 'string'; }) : [];
+        /* 撤销快照单独存在 UNDO_KEY；只有存档里的 saveId 与它配对才接回，
+           防止把上一局/上一次写的撤销栈套到当前局面上。旧存档内嵌 snapshots 仍兼容。 */
+        var savedUndo = meta ? readUndo(meta.saveId) : null;
+        var snaps = savedUndo
+          ? savedUndo.snaps
+          : (Array.isArray(s2.snapshots) ? s2.snapshots.filter(function (x) { return typeof x === 'string'; }) : []);
         s2.snapshots = snaps;
-        s2.turnStartIdx = Math.max(0, Math.min(snaps.length, Number(s2.turnStartIdx) || 0));
+        var tIdx = savedUndo ? savedUndo.turnStartIdx : (Number(s2.turnStartIdx) || 0);
+        s2.turnStartIdx = Math.max(0, Math.min(snaps.length, tIdx));
         delete s2.onUpdate;
         U().setGame(s2);
         U().showGame();
