@@ -536,8 +536,8 @@ window.WCData = (function () {
         workerX: [50.7, 56.2, 61.7, 67.2, 72.7],
         workerY: { clan: 23.0, gardener: 40.2, samurai: 57.0 },
         crests: [[7.1, 8.5], [17.6, 8.5], [28.2, 8.5], [38.8, 8.5], [49.4, 8.5]],
-        /* 家纹数量只看顶部 5 个槽；兑换条放家纹这一排中间，钱放右边，避免往下压住成员格 */
-        exchangeHud: [53.6, 1.3, 21.8, 10.6],
+        /* 家纹数量只看顶部 5 个槽；兑换条放家纹下方、成员格上方的窄带，钱放右边，避免压住成员格 */
+        exchangeHud: [53.6, 12.6, 21.8, 7.5],
         moneyHud: [85.0, 2.8, 7.4, 8.4]
       }
     }
@@ -575,7 +575,9 @@ window.WCData = (function () {
       workerX: BOARD_LAYOUT.domain.base.workerX.map(u),
       workerY: umap(BOARD_LAYOUT.domain.base.workerY, u),
       crests: BOARD_LAYOUT.domain.base.crests.map(uv),
-      exchangeHud: uv(BOARD_LAYOUT.domain.base.exchangeHud),
+      /* 兑换条保留完整 [x,y,w,h]：按钮去掉文字后要靠这组尺寸撑开，
+         否则 flex 只剩边框宽度，会缩成一条细缝。 */
+      exchangeHud: BOARD_LAYOUT.domain.base.exchangeHud.map(u),
       moneyHud: uv(BOARD_LAYOUT.domain.base.moneyHud)
     }
   };

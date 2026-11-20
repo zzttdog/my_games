@@ -610,41 +610,40 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
 }
 .pseal-token img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* 家纹这一排中间的兑换条；钱单独放右侧。
-   不再放家纹数字（顶部 5 个 mk8 槽本身就能数），也不往下压成员格。 */
+/* 家纹下方、成员格上方的兑换条；钱单独放右侧。
+   不再放家纹数字（顶部 5 个 mk8 槽本身就能数），也不往下压成员格。
+   ★ 2026-11-20：外层完全透明；两个兑换按钮只保留不透明边框，不写文字。 */
 .pexchange-hud {
   position: absolute;
   z-index: 9;
   box-sizing: border-box;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  padding: .4cqw .5cqw;
-  border: 1px solid rgba(201, 164, 95, .38);
-  border-radius: 4px;
-  background: rgba(10, 8, 7, .78);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, .26);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
-.pseal-ex { display: flex; gap: .55cqw; width: 100%; }
+.pseal-ex { display: flex; align-items: stretch; gap: .7cqw; width: 100%; }
 .pex-btn {
   flex: 1 1 0;
   min-width: 0;
-  padding: 2px 3px;
-  border: 1px solid rgba(232, 201, 135, .6);
+  min-height: 4.6cqw;
+  padding: 0;
+  border: 1px solid #d9b36b;
   border-radius: 3px;
-  background: rgba(201, 164, 95, .22);
-  color: #fff2d2;
+  background: transparent;
+  color: transparent;
   font: inherit;
-  font-size: clamp(7px, 2.1cqw, 10px);
-  font-weight: 600;
-  line-height: 1.15;
+  font-size: 0;
+  line-height: 0;
   white-space: nowrap;
   cursor: pointer;
 }
-.pex-btn span { display: block; }
-.pex-btn span:last-child { font-size: .92em; opacity: .92; }
-.pex-btn:hover { background: rgba(201, 164, 95, .42); }
-.pex-btn:disabled { opacity: .55; cursor: default; }
+.pex-btn:hover:not(:disabled) { background: rgba(217, 179, 107, .14); border-color: #f0d79f; }
+.pex-btn:focus-visible { outline: 1px solid #f0d79f; outline-offset: 1px; }
+.pex-btn:disabled { opacity: 1; border-color: #8d7754; cursor: default; }
 
 /* 右侧钱数：mk5 + 实时数量 */
 .pmoney-hud {

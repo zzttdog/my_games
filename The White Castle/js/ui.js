@@ -378,12 +378,13 @@
       const canUseExchange = p.id === cur;
       const canRes = canUseExchange && (Number(p.seals) || 0) >= 2;
       const canCoin = canUseExchange && (Number(p.seals) || 0) >= 1;
-      /* 家纹数量不再写数字：顶部 5 个 mk8 槽已经能数。兑换条放在家纹这一排中间；
-         钱单独放右侧，避免像上一版那样往下压住 5 个成员格。 */
-      const exchangeHud = showExchange ? `<div class="pexchange-hud" style="left:${pct(A.exchangeHud[0])};top:${pct(A.exchangeHud[1])};width:${pct(A.exchangeHud[2])}">
+      /* 家纹数量不再写数字：顶部 5 个 mk8 槽已经能数。兑换条放在家纹下方、成员格上方的窄带；
+         钱单独放右侧，避免像上一版那样往下压住 5 个成员格。
+         ★ 2026-11-20 按用户要求：按钮不再写文字，只保留不透明边框，按钮内部透明。 */
+      const exchangeHud = showExchange ? `<div class="pexchange-hud" style="left:${pct(A.exchangeHud[0])};top:${pct(A.exchangeHud[1])};width:${pct(A.exchangeHud[2])};height:${pct(A.exchangeHud[3])}">
         <div class="pseal-ex">
-          <button class="pex-btn" data-exchange="seal2res" ${canRes ? '' : 'disabled'} title="2 家纹换 1 个自选资源"><span>2纹</span><span>换资源</span></button>
-          <button class="pex-btn" data-exchange="seal2coin" ${canCoin ? '' : 'disabled'} title="1 家纹换 1 钱"><span>1纹</span><span>换钱</span></button>
+          <button class="pex-btn" data-exchange="seal2res" ${canRes ? '' : 'disabled'} title="2 家纹换 1 个自选资源" aria-label="2 家纹换 1 个自选资源"></button>
+          <button class="pex-btn" data-exchange="seal2coin" ${canCoin ? '' : 'disabled'} title="1 家纹换 1 钱" aria-label="1 家纹换 1 钱"></button>
         </div>
       </div>` : '';
       const moneyHud = `<div class="pmoney-hud" style="left:${pct(A.moneyHud[0])};top:${pct(A.moneyHud[1])};width:${pct(A.moneyHud[2])}" title="钱 ${p.coins}">
