@@ -15,6 +15,7 @@
  * 已知需要剔除的字段（真实浏览器扫描结论）：
  *   · 姬路城 g.onUpdate —— 函数回调槽（engine.js notify() 会 typeof === 'function' 调用）
  *   · 姬路城 g.snapshots —— 撤销历史，最多 400 条 JSON 字符串，实测让状态膨胀到 ~500KB
+ *     现在只把「本回合开始前 8 步 + 本回合全部快照」写进存档，刷新后仍能撤销/撤销至回合开始。
  *   · 自然和弦 G.undoStack / G.roundStart —— 联机下不存（与 bridge.js 的 DROP 一致）
  * ============================================================ */
 (function () {
@@ -89,7 +90,7 @@
     var skipped = {};
     var src = {};
     Object.keys(obj).forEach(function (k) {
-      if (drop && drop[k]) { skipped['state.' + k] = '显式剔除'; return; }
+      if (drop && drop[k]) return;             // 运行时字段：显式剔除，不算序列化失败
       src[k] = obj[k];
     });
     var out;
@@ -392,9 +393,19 @@
       try { replayObserve(st, sig); } catch (e) {}
       store(st);
     } catch (e) {
-      /* 配额超限/序列化异常：宁可丢档，也不要留下半截数据让下次读到 */
-      try { localStorage.removeItem(KEY); } catch (e2) {}
-      try { console.warn('[存档] 写入失败，已清除：' + (e && e.message)); } catch (e3) {}
+      /* setItem 是原子操作：写失败时绝不能把上一份完整存档删掉。
+         先重试一次「只保当前局面、不保撤销历史」，避免快照尾把配额顶满。 */
+      try {
+        var st2 = A.plain();
+        if (st2) {
+          st2.snapshots = [];
+          st2.turnStartIdx = 0;
+          store(st2);
+          lastSig = JSON.stringify(st2);
+        }
+      } catch (e2) {
+        try { console.warn('[存档] 写入失败，保留上一份存档：' + (e && e.message)); } catch (e3) {}
+      }
     }
   }
 
@@ -622,6 +633,14 @@
     replayKey: REPLAY_KEY
   };
 
+  /* 刷新/切后台前再兜底写一次：有些浏览器在点击后立刻刷新时，
+     最后一条动作的同步写档可能还没来得及落到 localStorage。 */
+  function flushSave() { try { write(); } catch (e) {} }
+  window.addEventListener('pagehide', flushSave);
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') flushSave();
+  });
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();
 
@@ -701,15 +720,45 @@
   function makeCastle() {
     function U() { return window.WCUI; }
     function state() { try { return U().game(); } catch (e) { return null; } }
-    /* g.onUpdate 是函数回调槽；g.snapshots 最多 400 条 JSON 字符串（约 500KB） */
+    /* g.onUpdate 是函数回调槽；g.snapshots 运行时最多 400 条 JSON 字符串。
+       存档只保留当前回合所需的尾部快照，避免整局 400 条把 localStorage 撑爆。 */
     var DROP = { onUpdate: 1, snapshots: 1 };
+    var KEEP_BEFORE_TURN = 8;
+    function snapshotTail(g) {
+      var snaps = Array.isArray(g.snapshots) ? g.snapshots : [];
+      var t = Math.max(0, Math.min(Number(g.turnStartIdx) || 0, snaps.length));
+      var from = Math.max(0, t - KEEP_BEFORE_TURN);
+      var out = [];
+      for (var i = from; i < snaps.length; i++) {
+        var raw = snaps[i];
+        if (typeof raw !== 'string') continue;
+        try {
+          /* 快照里也带 turnStartIdx；裁剪掉前面的历史后必须同步平移，
+             否则刷新后「撤销至回合开始」会指到错误的位置。 */
+          var o = JSON.parse(raw);
+          o.turnStartIdx = Math.max(0, (Number(o.turnStartIdx) || 0) - from);
+          o.snapshots = [];
+          out.push(JSON.stringify(o));
+        } catch (e) { out.push(raw); }
+      }
+      return { snaps: out, turnStartIdx: t - from };
+    }
     return {
       key: 'castle',
       state: state,
       hookEngine: true,
       started: function () { var g = state(); return !!(g && g.players && g.players.length); },
       isOver: function () { var g = state(); return !!(g && g.phase === 'gameEnd'); },
-      plain: function () { var g = state(); return g ? clean(g, DROP) : null; },
+      plain: function () {
+        var g = state();
+        if (!g) return null;
+        var st = clean(g, DROP);
+        if (!st) return null;
+        var tail = snapshotTail(g);
+        st.snapshots = tail.snaps;
+        st.turnStartIdx = tail.turnStartIdx;
+        return st;
+      },
       validate: function (s) {
         /* 只校验不可替代的骨架字段。g.castle / g.well 在 draft 阶段可能仍是 null，
            把它们当「必须存在」会把合法存档误判成旧结构直接丢掉。 */
@@ -722,8 +771,11 @@
       setOpts: function (o) { if (o && !NET) { try { U().setOpts(o); } catch (e) {} } },
       apply: function (s) {
         var s2 = JSON.parse(JSON.stringify(s));
-        /* 被剔除的字段必须补默认值：legalCommands() 直接读 g.snapshots.length */
-        s2.snapshots = [];
+        /* 恢复存档时把随档保存的撤销快照接回运行时；旧存档没有这个字段则退回空栈。
+           legalCommands() 直接读 g.snapshots.length，必须保证是数组。 */
+        var snaps = Array.isArray(s2.snapshots) ? s2.snapshots.filter(function (x) { return typeof x === 'string'; }) : [];
+        s2.snapshots = snaps;
+        s2.turnStartIdx = Math.max(0, Math.min(snaps.length, Number(s2.turnStartIdx) || 0));
         delete s2.onUpdate;
         U().setGame(s2);
         U().showGame();

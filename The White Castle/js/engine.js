@@ -338,27 +338,25 @@ window.WCEngine = (function () {
     p.clan[u.from]--; p.clan[u.to]++;
     pushLog(g, `${p.name} 家臣晋升至${{ floor1: '地头层', floor2: '使节层', floor3: '大名层' }[u.to]}`, 'act');
     if (u.to === 'floor3') {
-      /* 大名层：先结算灯笼奖励，再从房间卡 3 个效果里选 1 个（选过的不能再选） */
+      /* 大名层：天守阁的房间卡在开局就固定，整局不换、也不会被拿取。
+         到这里只从这张卡的 3 个效果里选 1 个（同一个效果整局只能选一次）。 */
       const eff = lanternEffects(p).slice();
-      /* 从「大名层」房间卡堆抽一张给这名玩家；牌堆空了就只有灯笼效果，不再有新卡 */
-      const deck3 = (g.castle.roomDecks && g.castle.roomDecks.f3) || [];
-      const drawn = deck3.length ? deck3.pop() : null;
       const keep = g.castle.rooms.find((r) => r.def.id === 'r6');
-      if (drawn) {
-        keep.card = drawn;
-        keep.card.used = [];
-        pushLog(g, `${p.name} 抽取大名层房间卡「${drawn.name}」（剩余 ${deck3.length} 张）`, 'act');
-      } else {
-        pushLog(g, '大名层房间卡已抽完，只结算灯笼效果', 'warn');
+      const kc = keep && keep.card;
+      if (!kc) {
+        pushLog(g, '大名层房间卡缺失，只结算灯笼效果', 'warn');
         if (again()) return;
         return;
       }
-      const kc = keep && keep.card;
-      const picks = (kc && kc.picks) || [];
-      kc && (kc.used = kc.used || []);
+      kc.used = kc.used || [];
+      const picks = kc.picks || [];
       const opts = picks.map((fx, i) => ({ id: String(i), effects: fx, label: `房间卡效果${i + 1}：${describeEffects(fx)}` }))
-        .filter((o) => kc && !kc.used.includes(o.id));
-      if (!opts.length) { if (again()) return; return; }
+        .filter((o) => !kc.used.includes(o.id));
+      if (!opts.length) {
+        pushLog(g, '大名层效果已全部选完，只结算灯笼效果', 'warn');
+        if (again()) return;
+        return;
+      }
       g.pending = { kind: 'choose', playerId: p.id, rest: eff.concat(rest || []), ctx: ctx || null, options: opts, roomPick: true };
       return;
     } else {

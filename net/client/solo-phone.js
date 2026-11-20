@@ -4,7 +4,7 @@
   var qs = new URLSearchParams(location.search);
   /* 手机壳外层每次升级都会换 v；把同一个 v 传给 iframe 里的游戏页，
      否则游戏页 HTML/旧 UI 可能被浏览器缓存，界面看起来像没改。 */
-  var shellV = qs.get('v') || '20261119o';
+  var shellV = qs.get('v') || '20261120a';
   function withV(url) {
     return url + (url.indexOf('?') >= 0 ? '&' : '?') + 'v=' + encodeURIComponent(shellV);
   }
