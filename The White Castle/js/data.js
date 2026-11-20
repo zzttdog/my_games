@@ -536,9 +536,9 @@ window.WCData = (function () {
         workerX: [50.7, 56.2, 61.7, 67.2, 72.7],
         workerY: { clan: 23.0, gardener: 40.2, samurai: 57.0 },
         crests: [[7.1, 8.5], [17.6, 8.5], [28.2, 8.5], [38.8, 8.5], [49.4, 8.5]],
-        /* 家纹数量只看顶部 5 个槽；兑换条放家纹下方、成员格上方的窄带，钱放右边，避免压住成员格 */
-        exchangeHud: [53.6, 12.6, 21.8, 7.5],
-        moneyHud: [85.0, 2.8, 7.4, 8.4]
+        /* 兑换条移到左侧基础资源区最上方，正好框住两枚印刷兑换徽记；钱放家纹右侧，直径与家纹一致 */
+        exchangeHud: [0.4, 18.5, 32.2, 7.7],
+        moneyHud: [60.0, 8.5, 10.2]
       }
     }
   };
@@ -578,7 +578,7 @@ window.WCData = (function () {
       /* 兑换条保留完整 [x,y,w,h]：按钮去掉文字后要靠这组尺寸撑开，
          否则 flex 只剩边框宽度，会缩成一条细缝。 */
       exchangeHud: BOARD_LAYOUT.domain.base.exchangeHud.map(u),
-      moneyHud: uv(BOARD_LAYOUT.domain.base.moneyHud)
+      moneyHud: BOARD_LAYOUT.domain.base.moneyHud.map(u)
     }
   };
 

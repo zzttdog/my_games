@@ -378,8 +378,8 @@
       const canUseExchange = p.id === cur;
       const canRes = canUseExchange && (Number(p.seals) || 0) >= 2;
       const canCoin = canUseExchange && (Number(p.seals) || 0) >= 1;
-      /* 家纹数量不再写数字：顶部 5 个 mk8 槽已经能数。兑换条放在家纹下方、成员格上方的窄带；
-         钱单独放右侧，避免像上一版那样往下压住 5 个成员格。
+      /* 家纹数量不再写数字：顶部 5 个 mk8 槽已经能数。两个兑换按钮框在左侧基础资源区最上方的
+         印刷兑换徽记上；钱图标移到 5 枚家纹的右侧，直径与家纹一致。
          ★ 2026-11-20 按用户要求：按钮不再写文字，只保留不透明边框，按钮内部透明。 */
       const exchangeHud = showExchange ? `<div class="pexchange-hud" style="left:${pct(A.exchangeHud[0])};top:${pct(A.exchangeHud[1])};width:${pct(A.exchangeHud[2])};height:${pct(A.exchangeHud[3])}">
         <div class="pseal-ex">
