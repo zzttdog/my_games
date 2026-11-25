@@ -371,7 +371,7 @@
       }).join('');
 
       const sealTokens = A.crests.map((xy, i) => i < (Number(p.seals) || 0)
-        ? `<span class="pseal-token" style="left:${pct(xy[0])};top:${pct(xy[1])}"><img src="assets/W.png?v=20261125a" alt="家纹"></span>`
+        ? `<span class="pseal-token" style="left:${pct(xy[0])};top:${pct(xy[1])}"><img src="assets/W.png?v=20261125b" alt="家纹"></span>`
         : '').join('');
 
       const showExchange = !p.isAI;
@@ -388,7 +388,7 @@
         </div>
       </div>` : '';
       const moneyHud = `<div class="pmoney-hud" style="left:${pct(A.moneyHud[0])};top:${pct(A.moneyHud[1])};width:${pct(A.moneyHud[2])}" title="钱 ${p.coins}">
-        <img src="assets/Q.jpg?v=20261125a" alt=""><b>${p.coins}</b>
+        <img src="assets/Q.jpg?v=20261125b" alt=""><b>${p.coins}</b>
       </div>`;
 
       /* ── 灯笼奖励区（★ 位置/尺寸改这里）──────────────────────────────
