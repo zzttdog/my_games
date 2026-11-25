@@ -611,7 +611,7 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
 .pseal-token img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* 左侧基础资源区最上方、框住两枚印刷兑换徽记的兑换条；钱放家纹右侧。
-   不再放家纹数字（顶部 5 个 mk8 槽本身就能数），也不往下压成员格。
+   不再放家纹数字（顶部 5 个家纹槽本身就能数），也不往下压成员格。
    ★ 2026-11-20：外层完全透明；两个兑换按钮只保留不透明边框，不写文字。 */
 .pexchange-hud {
   position: absolute;
@@ -645,7 +645,7 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
 .pex-btn:focus-visible { outline: 1px solid #f0d79f; outline-offset: 1px; }
 .pex-btn:disabled { opacity: 1; border-color: #8d7754; cursor: default; }
 
-/* 右侧钱数：mk5 + 实时数量 */
+/* 右侧钱数：Q.jpg + 实时数量 */
 .pmoney-hud {
   position: absolute;
   z-index: 9;

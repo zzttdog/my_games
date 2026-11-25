@@ -354,8 +354,8 @@
       /* ── 个人领地图上的可视化库存 ───────────────────────────────
          ① 资源记录轨：三条 0–7 折线轨，用一枚资源色方块标当前数量；
          ② 待派成员：每行 5 个印刷格，用半透明玩家色圆点表示池里剩余数；
-         ③ 家纹：顶部 5 个圆槽按 p.seals 放 mk8；
-         ④ 右上 HUD：mk8 家纹数 + mk5 钱数 + 2 个家纹兑换按钮。 */
+         ③ 家纹：顶部 5 个圆槽按 p.seals 放家纹图 W.png；
+         ④ 右上 HUD：家纹图 W.png + 钱图 Q.jpg + 2 个家纹兑换按钮。 */
       const resCubes = ['food', 'iron', 'pearl'].map((r) => {
         const n = Math.max(0, Math.min(7, Number(p.res && p.res[r]) || 0));
         const col = D.RESOURCES[r] || { hex: '#8b8172', name: r };
@@ -371,7 +371,7 @@
       }).join('');
 
       const sealTokens = A.crests.map((xy, i) => i < (Number(p.seals) || 0)
-        ? `<span class="pseal-token" style="left:${pct(xy[0])};top:${pct(xy[1])}"><img src="assets/${assetSrc('tiles/mk8.png')}" alt="家纹"${fallbackAttr}></span>`
+        ? `<span class="pseal-token" style="left:${pct(xy[0])};top:${pct(xy[1])}"><img src="assets/W.png?v=20261125a" alt="家纹"></span>`
         : '').join('');
 
       const showExchange = !p.isAI;
@@ -388,7 +388,7 @@
         </div>
       </div>` : '';
       const moneyHud = `<div class="pmoney-hud" style="left:${pct(A.moneyHud[0])};top:${pct(A.moneyHud[1])};width:${pct(A.moneyHud[2])}" title="钱 ${p.coins}">
-        <img src="assets/${assetSrc('tiles/mk5.png')}" alt=""${fallbackAttr}><b>${p.coins}</b>
+        <img src="assets/Q.jpg?v=20261125a" alt=""><b>${p.coins}</b>
       </div>`;
 
       /* ── 灯笼奖励区（★ 位置/尺寸改这里）──────────────────────────────
