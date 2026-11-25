@@ -600,8 +600,8 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
 .pseal-token {
   position: absolute;
   z-index: 3;
-  width: 7.3cqw;
-  height: 7.3cqw;
+  width: 8.0cqw;
+  height: 8.0cqw;
   transform: translate(-50%, -50%);
   border-radius: 50%;
   overflow: hidden;
